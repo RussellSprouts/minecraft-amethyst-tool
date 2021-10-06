@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Geode Optimizer</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            .block {
+                display: block;
+                position: absolute;
+                width: 32px;
+                height: 32px;
+                overflow: hidden;
+            }
+            .obsidian {
+                background-color: black;
+                border: none !important;
+
+            }
+            .slime {
+                background-color: #0D0;
+            }
+            .extra-slime {
+                background-color: #8F8;
+            }
+            .regular {
+                background-color: #0FF;
+            }
+            .air {
+                background-color: white;
+                border: none !important;
+            }
+            .x-axis {
+                font-size: 16px;
+                vertical-align: middle;
+                position: relative;
+            }
+
+            .invalid {
+                background-color: red;
+            }
+            .regular.invalid {
+                background-color: #800;
+            }
+        </style>
+    </head>
+    <body>
+        <label>.litematic file <input id="litematic" type="file"></label>
+        <div><h2>X Axis</h2>
+            <div class="x-axis"></div>
+        </div>
+        <canvas id="c" style="width:80%; height: 80%; display: block;"></canvas>
+        <script type="text/javascript" src="nbt.js"></script>
+        <script type="text/javascript" src="third_party/three.js/three.min.js"></script>
+        <script type="text/javascript" src="third_party/three.js/orbit_controls.js"></script>
+        <script type="text/javascript" src="third_party/pako/pako.min.js"></script>
+        <script type="text/javascript" src="file_access.js"></script>
+        <script type="text/javascript" src="main.js"></script>
+    </body>
+</html>

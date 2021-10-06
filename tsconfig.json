@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "lib": ["ES2020", "DOM", "DOM.Iterable"],
+        "module": "None",
+        "target": "ES2020",
+        "strict": true,
+        "outDir": "out"
+    }
+}
