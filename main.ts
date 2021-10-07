@@ -1,3 +1,8 @@
+import { SchematicReader, Point, IntRange, p, } from "./nbt";
+import { readFile } from './file_access';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+
 const fileSelector = document.getElementById('litematic') as HTMLInputElement;
 fileSelector.addEventListener('change', async () => {
   const fileList = fileSelector.files;
@@ -104,7 +109,7 @@ function main(schematic: SchematicReader) {
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   camera.position.set(-5, max_bud_y + 5, -5);
 
-  const controls = new (THREE as any).OrbitControls(camera, canvas);
+  const controls = new OrbitControls(camera, canvas);
   controls.target.set(
     (min_bud_x + max_bud_x) / 2,
     (min_bud_y + max_bud_y) / 2,

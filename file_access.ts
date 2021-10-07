@@ -9,7 +9,7 @@ function downloadURL(data: string, fileName: string) {
   a.remove();
 }
 
-function saveFile(data: Uint8Array, fileName: string, mimeType = "application/octet-stream") {
+export function saveFile(data: Uint8Array, fileName: string, mimeType = "application/octet-stream") {
   const blob = new Blob([data], {
     type: mimeType
   });
@@ -19,19 +19,16 @@ function saveFile(data: Uint8Array, fileName: string, mimeType = "application/oc
   setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 }
 
-function readFile(file: File): Promise<Uint8Array> {
+export function readFile(file: File): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener('load', () => {
-      console.log('File loaded!', new Uint8Array(reader.result as ArrayBuffer));
       resolve(new Uint8Array(reader.result as ArrayBuffer));
     });
     reader.addEventListener('error', () => {
-      console.log('File error', reader.error);
       reject(reader.error);
     });
     reader.addEventListener('abort', () => {
-      console.log('File aborted');
       reject(new Error('load aborted'));
     });
     reader.readAsArrayBuffer(file);

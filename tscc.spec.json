@@ -1,0 +1,14 @@
+{
+    "modules": {
+        "bundle": "main.ts"
+    },
+    "external": {
+        "pako": "pako",
+        "three": "THREE",
+        "three/examples/jsm/controls/OrbitControls": "OrbitControls"
+    },
+    "compilerFlags": {
+        "language_out": "ECMASCRIPT_2020"
+    },
+    "prefix": "out/"
+}
