@@ -534,6 +534,10 @@ export function p(x: number, y: number, z: number): Point {
   return `${x}:${y}:${z}`;
 }
 
+export function parseP(point: Point): [number, number, number] {
+  return point.split(':').map(c => +c) as [number, number, number];
+}
+
 /**
  * Converts the Nbt form of a block state palette entry into
  * a string like "minecraft:observer[facing=east]".
