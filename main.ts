@@ -263,13 +263,14 @@ function main(schematic: SchematicReader) {
   ];
 
   console.log('y slime used', y_slime_used);
-  create2dView(document.querySelector('.x-axis') as HTMLElement, x_slime_used, x_coords, min_bud_y, max_bud_y, min_bud_z, max_bud_z, (y, z) => p(fx, y, z));
-  create2dView(document.querySelector('.y-axis') as HTMLElement, y_slime_used, y_coords, min_bud_x, max_bud_x, min_bud_z, max_bud_z, (x, z) => p(x, fy, z));
-  create2dView(document.querySelector('.z-axis') as HTMLElement, z_slime_used, z_coords, min_bud_y, max_bud_y, min_bud_x, max_bud_x, (y, x) => p(x, y, fz));
+  create2dView(document.querySelector('.x-axis') as HTMLElement, x_slime_used, x_slime, x_coords, min_bud_y, max_bud_y, min_bud_z, max_bud_z, (y, z) => p(fx, y, z));
+  create2dView(document.querySelector('.y-axis') as HTMLElement, y_slime_used, y_slime, y_coords, min_bud_x, max_bud_x, min_bud_z, max_bud_z, (x, z) => p(x, fy, z));
+  create2dView(document.querySelector('.z-axis') as HTMLElement, z_slime_used, z_slime, z_coords, min_bud_y, max_bud_y, min_bud_x, max_bud_x, (y, x) => p(x, y, fz));
 
   function create2dView(
     element: HTMLElement,
     slime_used: Record<Point, boolean>,
+    slime: Record<Point, boolean>,
     amethyst_coords: Record<Point, boolean>,
     min_bud_a: number,
     max_bud_a: number,
@@ -305,6 +306,12 @@ function main(schematic: SchematicReader) {
           this.type = 'regular';
         } else if (this.type === 'regular') {
           this.type = 'slime';
+        } else if (this.type === 'optional-air') {
+          this.type = 'optional-slime';
+        } else if (this.type === 'optional-slime') {
+          this.type = 'optional-regular';
+        } else if (this.type === 'optional-regular') {
+          this.type = 'optional-air';
         }
         this.div.classList.toggle(this.type);
         updateModel(controllers);
@@ -350,6 +357,8 @@ function main(schematic: SchematicReader) {
           controllers[index] = new ButtonController(a, b, 'slime', div);
         } else if (amethyst_coords[index]) {
           controllers[index] = new ButtonController(a, b, 'amethyst', div);
+        } else if (slime[index]) {
+          controllers[index] = new ButtonController(a, b, 'optional-air', div);
         } else {
           controllers[index] = new ButtonController(a, b, 'air', div);
         }
@@ -361,12 +370,12 @@ function main(schematic: SchematicReader) {
 
     function connectsToSlime(controller: ButtonController) {
       if (!controller) return false;
-      return controller.type === 'slime' || controller.type === 'regular' || controller.type === 'extra-slime';
+      return controller.type.includes('slime') || controller.type.includes('regular');
     }
 
     function connectsToRegular(controller: ButtonController) {
       if (!controller) return false;
-      return controller.type === 'slime' || controller.type === 'extra-slime';
+      return controller.type.includes('slime');
     }
 
     function updateModel(controllers: Record<Point, ButtonController>) {
@@ -376,17 +385,17 @@ function main(schematic: SchematicReader) {
         for (const b of new IntRange(min_bud_b, max_bud_b + 1).expand(1)) {
           const index = p(a, b);
           controllers[index].setInvalid(false);
-          if (!alreadyFloodFilled[index] && controllers[index] && controllers[index].type !== 'air' && controllers[index].type !== 'amethyst') {
+          if (!alreadyFloodFilled[index] && controllers[index] && !controllers[index].type.includes('air') && !controllers[index].type.includes('amethyst')) {
             floodFill(a, b, 1, currentColor);
             currentColor = currentColor + 1;
           }
-          if (controllers[index].type === 'slime' || controllers[index].type === 'extra-slime') {
+          if (controllers[index].type.includes('slime')) {
             controllers[index].setNeighbors(
               connectsToSlime(controllers[p(a + 1, b)]),
               connectsToSlime(controllers[p(a - 1, b)]),
               connectsToSlime(controllers[p(a, b - 1)]),
               connectsToSlime(controllers[p(a, b + 1)]));
-          } else if (controllers[index].type === 'regular') {
+          } else if (controllers[index].type.includes('regular')) {
             controllers[index].setNeighbors(
               connectsToRegular(controllers[p(a + 1, b)]),
               connectsToRegular(controllers[p(a - 1, b)]),
@@ -402,7 +411,7 @@ function main(schematic: SchematicReader) {
           const index = p(a, b);
           const type = controllers[index].type;
           // detect places where a regular block is touching the slime block of a different machine
-          if (type === 'regular') {
+          if (type.includes('regular')) {
             if (controllers[p(a + 1, b)] && connectsToRegular(controllers[p(a + 1, b)]) && controllers[p(a + 1, b)].color !== controllers[index].color
               || controllers[p(a - 1, b)] && connectsToRegular(controllers[p(a - 1, b)]) && controllers[p(a - 1, b)].color !== controllers[index].color
               || controllers[p(a, b + 1)] && connectsToRegular(controllers[p(a, b + 1)]) && controllers[p(a, b + 1)].color !== controllers[index].color
@@ -417,6 +426,9 @@ function main(schematic: SchematicReader) {
             'extra-slime': 'minecraft:slime_block',
             'amethyst': 'minecraft:obsidian',
             'regular': 'minecraft:smooth_basalt',
+            'optional-regular': 'minecraft:smooth_basalt',
+            'optional-slime': 'minecraft:slime_block',
+            'optional-air': 'minecraft:air',
           }[type] ?? 'minecraft:air';
 
           renderer.setBlockState(x, y, z, block);
@@ -436,14 +448,14 @@ function main(schematic: SchematicReader) {
           return 0;
         }
 
-        if (n === 1 && controller.type === 'regular') {
+        if (n === 1 && controller.type.includes('regular')) {
           // don't process regular blocks if they are first.
           alreadyFloodFilled[index] = false;
           return 0;
         }
 
         let total_number = 1;
-        if (controller.type === 'slime' || controller.type === 'extra-slime') {
+        if (controller.type.includes('slime')) {
           total_number += floodFill(a + 1, b, n + 1, color);
           total_number += floodFill(a - 1, b, n + 1, color);
           total_number += floodFill(a, b + 1, n + 1, color);
@@ -451,7 +463,7 @@ function main(schematic: SchematicReader) {
         }
 
         controller.setN(0);
-        if (controller.type === 'slime' || controller.type === 'regular' || controller.type === 'extra-slime') {
+        if (controller.type.includes('slime') || controller.type.includes('regular')) {
           if (n === 1) {
             controller.setN(total_number);
           }
