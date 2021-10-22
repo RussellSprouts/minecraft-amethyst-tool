@@ -1,20 +1,46 @@
 import * as THREE from 'three';
-import { p, Point } from './nbt';
+import { p, parseP, Point, SchematicReader, SchematicWriter } from './litematic';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-const CUBE = new THREE.BoxGeometry(1, 1, 1);
+const STONE_BUTTON = new THREE.MeshStandardMaterial({ color: '#888' });
+
 const TEXTURES: Record<string, THREE.Material | undefined> = {
   'minecraft:budding_amethyst': new THREE.MeshStandardMaterial({ color: 'purple' }),
   'minecraft:obsidian': new THREE.MeshStandardMaterial({ color: '#120d1d' }),
   'minecraft:slime_block': new THREE.MeshStandardMaterial({ color: '#0f0', opacity: 0.5, transparent: true }),
-  'unreachable': new THREE.MeshStandardMaterial({ color: '#f00', opacity: 0.5, transparent: true }),
   'minecraft:calcite': new THREE.MeshStandardMaterial({ color: '#aaa' }),
   'minecraft:smooth_basalt': new THREE.MeshStandardMaterial({ color: '#333' }),
   'minecraft:amethyst_block': new THREE.MeshStandardMaterial({ color: '#bf40bf' }),
+  'minecraft:stone_button[face=ceiling,facing=north]': STONE_BUTTON,
+  'minecraft:stone_button[face=floor,facing=north]': STONE_BUTTON,
+  'minecraft:stone_button[face=wall,facing=north]': STONE_BUTTON,
+  'minecraft:stone_button[face=wall,facing=south]': STONE_BUTTON,
+  'minecraft:stone_button[face=wall,facing=east]': STONE_BUTTON,
+  'minecraft:stone_button[face=wall,facing=west]': STONE_BUTTON,
   'default': new THREE.MeshStandardMaterial({ color: '#777' }),
 };
 
-
+const MODELS: Record<string, THREE.BufferGeometry> = {
+  'default': new THREE.BoxGeometry(1, 1, 1),
+  'minecraft:stone_button[face=ceiling,facing=north]':
+    new THREE.BoxGeometry(6 / 16, 2 / 16, 4 / 16)
+      .translate(0, 7 / 16, 0),
+  'minecraft:stone_button[face=floor,facing=north]':
+    new THREE.BoxGeometry(6 / 16, 2 / 16, 4 / 16)
+      .translate(0, -7 / 16, 0),
+  'minecraft:stone_button[face=wall,facing=north]':
+    new THREE.BoxGeometry(6 / 16, 4 / 16, 2 / 16)
+      .translate(0, 0, 7 / 16),
+  'minecraft:stone_button[face=wall,facing=south]':
+    new THREE.BoxGeometry(6 / 16, 4 / 16, 2 / 16)
+      .translate(0, 0, -7 / 16),
+  'minecraft:stone_button[face=wall,facing=west]':
+    new THREE.BoxGeometry(2 / 16, 4 / 16, 6 / 16)
+      .translate(7 / 16, 0, 0),
+  'minecraft:stone_button[face=wall,facing=east]':
+    new THREE.BoxGeometry(2 / 16, 4 / 16, 6 / 16)
+      .translate(-7 / 16, 0, 0),
+};
 
 export class Renderer {
   allBlockStates: Record<Point, string | undefined> = {};
@@ -56,6 +82,8 @@ export class Renderer {
 
     const controls = new OrbitControls(this.camera, canvas);
     controls.update();
+    controls.minDistance = 1;
+    controls.maxDistance = 100;
     // controls.autoRotate = true;
     // controls.autoRotateSpeed = 20;
     this.controls = controls;
@@ -72,7 +100,7 @@ export class Renderer {
       this.allBlocks[point] && this.scene.remove(this.allBlocks[point]!);
       this.allBlocks[point] = undefined;
       if (blockState !== 'minecraft:air') {
-        const newMesh = new THREE.Mesh(CUBE, TEXTURES[blockState] ?? TEXTURES['default']);
+        const newMesh = new THREE.Mesh(MODELS[blockState] ?? MODELS['default'], TEXTURES[blockState] ?? TEXTURES['default']);
         newMesh.position.set(x, y, z);
         this.allBlocks[point] = newMesh;
         this.scene.add(newMesh);
@@ -140,5 +168,14 @@ export class Renderer {
         requestAnimationFrame(recurse);
       }
     });
+  }
+
+  toSchematic(): SchematicWriter {
+    const writer = new SchematicWriter('schematic', 'russellsprouts');
+    for (const point of Object.keys(this.allBlockStates) as Point[]) {
+      const [x, y, z] = parseP(point);
+      writer.setBlock(x, y, z, this.allBlockStates[point] ?? 'minecraft:air');
+    }
+    return writer;
   }
 }

@@ -1,7 +1,5 @@
-import { SchematicReader, Point, IntRange, p, parseP, } from "./nbt";
-import { readFile } from './file_access';
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { SchematicReader, Point, IntRange, p, parseP, parseBlockState, } from "./litematic";
+import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 
 const fileSelector = document.getElementById('litematic') as HTMLInputElement;
@@ -203,10 +201,25 @@ function main(schematic: SchematicReader) {
     'THEORETICAL MAX EFFICIENCY: ',
     percent(n_accessible_faces / n_all_faces));
 
-
+  // Which side the button should attach to,
+  // based on which direction there is a block.
+  const button_by_face = [
+    'minecraft:stone_button[face=wall,facing=west]', // [+1, 0, 0],
+    'minecraft:stone_button[face=wall,facing=east]', // [-1, 0, 0],
+    'minecraft:stone_button[face=ceiling,facing=north]', // [0, +1, 0],
+    'minecraft:stone_button[face=floor,facing=north]',// [0, -1, 0],
+    'minecraft:stone_button[face=wall,facing=north]',// [0, 0, +1],
+    'minecraft:stone_button[face=wall,facing=south]',// [0, 0, -1],
+  ];
   for (const unreachable_block of Object.keys(unreachable_faces)) {
     const [x, y, z] = unreachable_block.split(/:/g).map(v => +v);
-    renderer.setBlockState(x, y, z, 'unreachable');
+    for (let i = 0; i < faces.length; i++) {
+      const [dx, dy, dz] = faces[i];
+      if (schematic.getBlock(x + dx, y + dy, z + dz) === 'minecraft:budding_amethyst') {
+        renderer.setBlockState(x, y, z, button_by_face[i]);
+        break;
+      }
+    }
   }
 
   // Remove redundant slime blocks -- ones that
@@ -515,6 +528,10 @@ function main(schematic: SchematicReader) {
     expected_shards_per_harvest / optimal_time * 60 * 60 * 20;
 
   console.log('EXPECTED SHARDS PER HOUR', expected_shards_per_hour);
+
+  document.getElementById('save')!.onclick = () => {
+    saveFile(renderer.toSchematic().save(), 'geode-farm-export.litematic');
+  };
 
   function binomial(k: number, n: number, p: number) {
     return combination(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
