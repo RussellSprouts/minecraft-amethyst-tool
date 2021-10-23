@@ -232,9 +232,30 @@ function main(schematic: SchematicReader) {
   const x_slime_used: Record<Point, boolean> = {};
   const y_slime_used: Record<Point, boolean> = {};
   const z_slime_used: Record<Point, boolean> = {};
+
+  // Find blocks that are surrounded by obsidian on all sides
+  // so that we can try to handle them from another axis.
+  function isSurroundedByObsidian(x: number, y: number, z: number) {
+    if (x_coords[p(x, y + 1, z)] && x_coords[p(x, y - 1, z)] && x_coords[p(x, y, z + 1)] && x_coords[p(x, y, z - 1)]) {
+      return true;
+    }
+    if (y_coords[p(x + 1, y, z)] && y_coords[p(x - 1, y, z)] && y_coords[p(x, y, z + 1)] && y_coords[p(x, y, z - 2)]) {
+      return true;
+    }
+    if (z_coords[p(x + 1, y, z)] && z_coords[p(x - 1, y, z)] && z_coords[p(x, y + 1, z)] && z_coords[p(x, y - 1, z)]) {
+      return true;
+    }
+  }
+
   for (const block of Object.keys(accessible_faces)) {
     const [x, y, z] = block.split(/:/g).map(v => +v);
-    if (x_slime[p(fx, y, z)]) {
+    if (x_slime[p(fx, y, z)] && !isSurroundedByObsidian(fx, y, z)) {
+      x_slime_used[p(fx, y, z)] = true;
+    } else if (z_slime[p(x, y, fz)] && !isSurroundedByObsidian(x, y, fz)) {
+      z_slime_used[p(x, y, fz)] = true;
+    } else if (y_slime[p(x, fy, z)] && !isSurroundedByObsidian(x, fy, z)) {
+      y_slime_used[p(x, fy, z)] = true;
+    } else if (x_slime[p(fx, y, z)]) {
       x_slime_used[p(fx, y, z)] = true;
     } else if (z_slime[p(x, y, fz)]) {
       z_slime_used[p(x, y, fz)] = true;
@@ -489,6 +510,14 @@ function main(schematic: SchematicReader) {
       renderer.requestRenderIfNotRequested();
     }
   }
+
+  renderer.setBlockState(fx + 2, fy + 2, fz - 0, 'minecraft:sticky_piston');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 2, 'minecraft:piston');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 4, 'minecraft:observer');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 6, 'minecraft:redstone_lamp');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 8, 'minecraft:redstone_lamp[lit=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 10, 'minecraft:note_block');
+
 
   // The problem of generating the flying machines:
   // 1. Start with all slime blocks initialized as regular blocks

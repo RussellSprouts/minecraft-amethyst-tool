@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "build": "tscc",
-    "watch": "nodemon -e ts -x npm run build"
+    "watch": "nodemon -e ts -x npm run build",
+    "textures": "node textures/generate.js textures/index.ts textures/*.png"
   },
   "author": "",
   "license": "ISC",

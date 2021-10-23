@@ -1,46 +1,134 @@
 import * as THREE from 'three';
-import { p, parseP, Point, SchematicReader, SchematicWriter } from './litematic';
+import { p, parseP, Point, SchematicWriter } from './litematic';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import * as textures from './textures/index';
 
-const STONE_BUTTON = new THREE.MeshStandardMaterial({ color: '#888' });
+const loader = new THREE.TextureLoader();
 
-const TEXTURES: Record<string, THREE.Material | undefined> = {
+const textureCache = new Map<string, THREE.Texture>();
+function load(url: string) {
+  if (textureCache.has(url)) {
+    return textureCache.get(url)!;
+  }
+  const texture = loader.load(url);
+  // Ensure the textures are resized using nearest
+  // neighbor filtering instead of bicubic.
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  textureCache.set(url, texture);
+  return texture;
+}
+
+function cubeMaterial(
+  east: string,
+  west: string,
+  up: string,
+  down: string,
+  south: string,
+  north: string,): THREE.Material[] {
+  return [
+    new THREE.MeshStandardMaterial({ map: load(east) }),
+    new THREE.MeshStandardMaterial({ map: load(west) }),
+    new THREE.MeshStandardMaterial({ map: load(up) }),
+    new THREE.MeshStandardMaterial({ map: load(down) }),
+    new THREE.MeshStandardMaterial({ map: load(south) }),
+    new THREE.MeshStandardMaterial({ map: load(north) }),
+  ];
+}
+
+const TEXTURES: Record<string, THREE.Material | THREE.Material[] | undefined> = {
   'minecraft:budding_amethyst': new THREE.MeshStandardMaterial({ color: 'purple' }),
   'minecraft:obsidian': new THREE.MeshStandardMaterial({ color: '#120d1d' }),
-  'minecraft:slime_block': new THREE.MeshStandardMaterial({ color: '#0f0', opacity: 0.5, transparent: true }),
+  'minecraft:slime_block': new THREE.MeshStandardMaterial({ color: '#0f0', opacity: 0.75, transparent: true }),
   'minecraft:calcite': new THREE.MeshStandardMaterial({ color: '#aaa' }),
   'minecraft:smooth_basalt': new THREE.MeshStandardMaterial({ color: '#333' }),
   'minecraft:amethyst_block': new THREE.MeshStandardMaterial({ color: '#bf40bf' }),
-  'minecraft:stone_button[face=ceiling,facing=north]': STONE_BUTTON,
-  'minecraft:stone_button[face=floor,facing=north]': STONE_BUTTON,
-  'minecraft:stone_button[face=wall,facing=north]': STONE_BUTTON,
-  'minecraft:stone_button[face=wall,facing=south]': STONE_BUTTON,
-  'minecraft:stone_button[face=wall,facing=east]': STONE_BUTTON,
-  'minecraft:stone_button[face=wall,facing=west]': STONE_BUTTON,
+  'minecraft:stone_button': new THREE.MeshStandardMaterial({ color: '#888' }),
+  'minecraft:sticky_piston': cubeMaterial(
+    textures.sticky_piston_side(),
+    textures.sticky_piston_side(),
+    textures.sticky_piston_face(),
+    textures.piston_back(),
+    textures.sticky_piston_side(),
+    textures.sticky_piston_side()
+  ),
+  'minecraft:piston': cubeMaterial(
+    textures.piston_side(),
+    textures.piston_side(),
+    textures.piston_face(),
+    textures.piston_back(),
+    textures.piston_side(),
+    textures.piston_side()
+  ),
+  'minecraft:observer': cubeMaterial(
+    textures.observer_side(),
+    textures.observer_side(),
+    textures.observer_face(),
+    textures.observer_back(),
+    textures.observer_arrow(),
+    textures.observer_arrow()
+  ),
+  'minecraft:note_block': new THREE.MeshStandardMaterial({ map: load(textures.note_block()) }),
+  'minecraft:redstone_lamp': new THREE.MeshStandardMaterial({ map: load(textures.redstone_lamp_off()) }),
+  'minecraft:redstone_lamp[lit=true]': new THREE.MeshStandardMaterial({ map: load(textures.redstone_lamp_lit()) }),
   'default': new THREE.MeshStandardMaterial({ color: '#777' }),
 };
 
 const MODELS: Record<string, THREE.BufferGeometry> = {
   'default': new THREE.BoxGeometry(1, 1, 1),
-  'minecraft:stone_button[face=ceiling,facing=north]':
-    new THREE.BoxGeometry(6 / 16, 2 / 16, 4 / 16)
-      .translate(0, 7 / 16, 0),
-  'minecraft:stone_button[face=floor,facing=north]':
+  'minecraft:stone_button':
     new THREE.BoxGeometry(6 / 16, 2 / 16, 4 / 16)
       .translate(0, -7 / 16, 0),
-  'minecraft:stone_button[face=wall,facing=north]':
-    new THREE.BoxGeometry(6 / 16, 4 / 16, 2 / 16)
-      .translate(0, 0, 7 / 16),
-  'minecraft:stone_button[face=wall,facing=south]':
-    new THREE.BoxGeometry(6 / 16, 4 / 16, 2 / 16)
-      .translate(0, 0, -7 / 16),
-  'minecraft:stone_button[face=wall,facing=west]':
-    new THREE.BoxGeometry(2 / 16, 4 / 16, 6 / 16)
-      .translate(7 / 16, 0, 0),
-  'minecraft:stone_button[face=wall,facing=east]':
-    new THREE.BoxGeometry(2 / 16, 4 / 16, 6 / 16)
-      .translate(-7 / 16, 0, 0),
 };
+
+const ROTATE_UP = new THREE.Euler(0, 0, 0);
+const ROTATE_DOWN = new THREE.Euler(Math.PI, 0, 0)
+const ROTATE_NORTH = new THREE.Euler(-Math.PI / 2, 0, 0);
+const ROTATE_SOUTH = new THREE.Euler(-Math.PI / 2, 0, Math.PI);
+const ROTATE_EAST = new THREE.Euler(-Math.PI / 2, 0, -Math.PI / 2);
+const ROTATE_WEST = new THREE.Euler(-Math.PI / 2, 0, Math.PI / 2);
+
+function generateRotations(block: string): Record<string, THREE.Euler> {
+  return {
+    [`${block}[facing=up]`]: ROTATE_UP,
+    [`${block}[facing=down]`]: ROTATE_DOWN,
+    [`${block}[facing=north]`]: ROTATE_NORTH,
+    [`${block}[facing=south]`]: ROTATE_SOUTH,
+    [`${block}[facing=east]`]: ROTATE_EAST,
+    [`${block}[facing=west]`]: ROTATE_WEST,
+  }
+}
+
+const ROTATIONS: Record<string, THREE.Euler> = {
+  'default': ROTATE_UP,
+  ...generateRotations('minecraft:observer'),
+  ...generateRotations('minecraft:sticky_piston'),
+  ...generateRotations('minecraft:piston'),
+  // buttons don't use the usual rotations, because they
+  // have 4 separate rotations for floors and ceilings.
+  'minecraft:stone_button[face=ceiling,facing=north]': ROTATE_DOWN,
+  'minecraft:stone_button[face=wall,facing=north]': ROTATE_NORTH,
+  'minecraft:stone_button[face=wall,facing=south]': ROTATE_SOUTH,
+  'minecraft:stone_button[face=wall,facing=east]': ROTATE_EAST,
+  'minecraft:stone_button[face=wall,facing=west]': ROTATE_WEST,
+};
+
+/**
+ * Checks the property map for information about the given block state.
+ * Looks for exact match block states with [properties], then checks
+ * the block without properties, and otherwise returns the 'default' value
+ * of the map.
+ */
+function getPropertyForBlock<T>(propertyMap: Record<string, T>, block: string): T {
+  if (propertyMap[block]) {
+    return propertyMap[block];
+  }
+  const propsIndex = block.indexOf('[');
+  if (propsIndex !== -1) {
+    return propertyMap[block.slice(0, propsIndex)] ?? propertyMap['default'];
+  }
+  return propertyMap['default'];
+}
 
 export class Renderer {
   allBlockStates: Record<Point, string | undefined> = {};
@@ -100,8 +188,9 @@ export class Renderer {
       this.allBlocks[point] && this.scene.remove(this.allBlocks[point]!);
       this.allBlocks[point] = undefined;
       if (blockState !== 'minecraft:air') {
-        const newMesh = new THREE.Mesh(MODELS[blockState] ?? MODELS['default'], TEXTURES[blockState] ?? TEXTURES['default']);
+        const newMesh = new THREE.Mesh(getPropertyForBlock(MODELS, blockState), getPropertyForBlock(TEXTURES, blockState));
         newMesh.position.set(x, y, z);
+        newMesh.setRotationFromEuler(getPropertyForBlock(ROTATIONS, blockState));
         this.allBlocks[point] = newMesh;
         this.scene.add(newMesh);
       }
