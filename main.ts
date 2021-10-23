@@ -517,7 +517,7 @@ function main(schematic: SchematicReader) {
   renderer.setBlockState(fx + 2, fy + 2, fz - 6, 'minecraft:redstone_lamp');
   renderer.setBlockState(fx + 2, fy + 2, fz - 8, 'minecraft:redstone_lamp[lit=true]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 10, 'minecraft:note_block');
-
+  renderer.setBlockState(fx + 2, fy + 2, fz - 12, 'minecraft:redstone_block');
 
   // The problem of generating the flying machines:
   // 1. Start with all slime blocks initialized as regular blocks

@@ -3,75 +3,117 @@ import { p, parseP, Point, SchematicWriter } from './litematic';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as textures from './textures/index';
 
-const loader = new THREE.TextureLoader();
+const spriteSheet = new THREE.TextureLoader().load(textures.image);
+spriteSheet.minFilter = THREE.NearestFilter;
+spriteSheet.magFilter = THREE.NearestFilter;
 
-const textureCache = new Map<string, THREE.Texture>();
-function load(url: string) {
-  if (textureCache.has(url)) {
-    return textureCache.get(url)!;
+const cubeVertices = [
+  // front
+  { pos: [-0.5, -0.5, 0.5], norm: [0, 0, 1], uv: [0, 0], },
+  { pos: [0.5, -0.5, 0.5], norm: [0, 0, 1], uv: [1, 0], },
+  { pos: [-0.5, 0.5, 0.5], norm: [0, 0, 1], uv: [0, 1], },
+  { pos: [0.5, 0.5, 0.5], norm: [0, 0, 1], uv: [1, 1], },
+  // right
+  { pos: [0.5, -0.5, 0.5], norm: [1, 0, 0], uv: [0, 0], },
+  { pos: [0.5, -0.5, -0.5], norm: [1, 0, 0], uv: [1, 0], },
+  { pos: [0.5, 0.5, 0.5], norm: [1, 0, 0], uv: [0, 1], },
+  { pos: [0.5, 0.5, -0.5], norm: [1, 0, 0], uv: [1, 1], },
+  // back
+  { pos: [0.5, -0.5, -0.5], norm: [0, 0, -1], uv: [0, 0], },
+  { pos: [-0.5, -0.5, -0.5], norm: [0, 0, -1], uv: [1, 0], },
+  { pos: [0.5, 0.5, -0.5], norm: [0, 0, -1], uv: [0, 1], },
+  { pos: [-0.5, 0.5, -0.5], norm: [0, 0, -1], uv: [1, 1], },
+  // left
+  { pos: [-0.5, -0.5, -0.5], norm: [-1, 0, 0], uv: [0, 0], },
+  { pos: [-0.5, -0.5, 0.5], norm: [-1, 0, 0], uv: [1, 0], },
+  { pos: [-0.5, 0.5, -0.5], norm: [-1, 0, 0], uv: [0, 1], },
+  { pos: [-0.5, 0.5, 0.5], norm: [-1, 0, 0], uv: [1, 1], },
+  // top
+  { pos: [0.5, 0.5, -0.5], norm: [0, 1, 0], uv: [0, 0], },
+  { pos: [-0.5, 0.5, -0.5], norm: [0, 1, 0], uv: [1, 0], },
+  { pos: [0.5, 0.5, 0.5], norm: [0, 1, 0], uv: [0, 1], },
+  { pos: [-0.5, 0.5, 0.5], norm: [0, 1, 0], uv: [1, 1], },
+  // bottom
+  { pos: [0.5, -0.5, 0.5], norm: [0, -1, 0], uv: [0, 0], },
+  { pos: [-0.5, -0.5, 0.5], norm: [0, -1, 0], uv: [1, 0], },
+  { pos: [0.5, -0.5, -0.5], norm: [0, -1, 0], uv: [0, 1], },
+  { pos: [-0.5, -0.5, -0.5], norm: [0, -1, 0], uv: [1, 1], },
+];
+
+const cubeIndices = new Uint16Array([
+  0, 1, 2, 2, 1, 3,  // front
+  4, 5, 6, 6, 5, 7,  // right
+  8, 9, 10, 10, 9, 11,  // back
+  12, 13, 14, 14, 13, 15,  // left
+  16, 17, 18, 18, 17, 19,  // top
+  20, 21, 22, 22, 21, 23,  // bottom
+]);
+
+const positionsArr: number[] = [];
+const normalsArr: number[] = [];
+const uvsArr: number[] = [];
+for (const vertex of cubeVertices) {
+  positionsArr.push(...vertex.pos);
+  normalsArr.push(...vertex.norm);
+  uvsArr.push(...vertex.uv);
+}
+const positions = new Float32Array(positionsArr);
+const normals = new Float32Array(normalsArr);
+const uvs = new Float32Array(uvsArr);
+
+/**
+ * Creates geometry with UV mappings to map the faces
+ * to the given textures.
+ */
+function texturedCube(
+  ...faces: [
+    south: number,
+    east: number,
+    north: number,
+    west: number,
+    down: number,
+    up: number]): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position',
+    new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('normal',
+    new THREE.BufferAttribute(normals, 3));
+
+  const newUvs = new Float32Array(uvs);
+  for (let i = 0; i < newUvs.length; i += 2) {
+    const face = faces[Math.floor(i / 8)];
+    const uvStart = face / textures.nImages;
+    const uvEnd = (face + 1) / textures.nImages;
+    newUvs[i] = newUvs[i] ? uvEnd : uvStart;
   }
-  const texture = loader.load(url);
-  // Ensure the textures are resized using nearest
-  // neighbor filtering instead of bicubic.
-  texture.minFilter = THREE.NearestFilter;
-  texture.magFilter = THREE.NearestFilter;
-  textureCache.set(url, texture);
-  return texture;
+
+  geometry.setAttribute('uv',
+    new THREE.BufferAttribute(newUvs, 2));
+  geometry.setIndex(new THREE.BufferAttribute(cubeIndices, 1));
+  return geometry;
 }
 
-function cubeMaterial(
-  east: string,
-  west: string,
-  up: string,
-  down: string,
-  south: string,
-  north: string,): THREE.Material[] {
-  return [
-    new THREE.MeshStandardMaterial({ map: load(east) }),
-    new THREE.MeshStandardMaterial({ map: load(west) }),
-    new THREE.MeshStandardMaterial({ map: load(up) }),
-    new THREE.MeshStandardMaterial({ map: load(down) }),
-    new THREE.MeshStandardMaterial({ map: load(south) }),
-    new THREE.MeshStandardMaterial({ map: load(north) }),
-  ];
+function singleTexturedCube(face: number) {
+  return texturedCube(face, face, face, face, face, face);
+}
+
+function singleColorMaterial(color: string, opacity = 1) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    opacity,
+    transparent: opacity !== 1
+  });
 }
 
 const TEXTURES: Record<string, THREE.Material | THREE.Material[] | undefined> = {
-  'minecraft:budding_amethyst': new THREE.MeshStandardMaterial({ color: 'purple' }),
-  'minecraft:obsidian': new THREE.MeshStandardMaterial({ color: '#120d1d' }),
-  'minecraft:slime_block': new THREE.MeshStandardMaterial({ color: '#0f0', opacity: 0.75, transparent: true }),
-  'minecraft:calcite': new THREE.MeshStandardMaterial({ color: '#aaa' }),
-  'minecraft:smooth_basalt': new THREE.MeshStandardMaterial({ color: '#333' }),
-  'minecraft:amethyst_block': new THREE.MeshStandardMaterial({ color: '#bf40bf' }),
-  'minecraft:stone_button': new THREE.MeshStandardMaterial({ color: '#888' }),
-  'minecraft:sticky_piston': cubeMaterial(
-    textures.sticky_piston_side(),
-    textures.sticky_piston_side(),
-    textures.sticky_piston_face(),
-    textures.piston_back(),
-    textures.sticky_piston_side(),
-    textures.sticky_piston_side()
-  ),
-  'minecraft:piston': cubeMaterial(
-    textures.piston_side(),
-    textures.piston_side(),
-    textures.piston_face(),
-    textures.piston_back(),
-    textures.piston_side(),
-    textures.piston_side()
-  ),
-  'minecraft:observer': cubeMaterial(
-    textures.observer_side(),
-    textures.observer_side(),
-    textures.observer_face(),
-    textures.observer_back(),
-    textures.observer_arrow(),
-    textures.observer_arrow()
-  ),
-  'minecraft:note_block': new THREE.MeshStandardMaterial({ map: load(textures.note_block()) }),
-  'minecraft:redstone_lamp': new THREE.MeshStandardMaterial({ map: load(textures.redstone_lamp_off()) }),
-  'minecraft:redstone_lamp[lit=true]': new THREE.MeshStandardMaterial({ map: load(textures.redstone_lamp_lit()) }),
-  'default': new THREE.MeshStandardMaterial({ color: '#777' }),
+  'minecraft:budding_amethyst': singleColorMaterial('purple'),
+  'minecraft:obsidian': singleColorMaterial('#120d1d'),
+  'minecraft:slime_block': singleColorMaterial('#0f0', 0.75),
+  'minecraft:calcite': singleColorMaterial('#aaa'),
+  'minecraft:smooth_basalt': singleColorMaterial('#333'),
+  'minecraft:amethyst_block': singleColorMaterial('#bf40bf'),
+  'minecraft:stone_button': singleColorMaterial('#888'),
+  'default': new THREE.MeshStandardMaterial({ map: spriteSheet }),
 };
 
 const MODELS: Record<string, THREE.BufferGeometry> = {
@@ -79,6 +121,35 @@ const MODELS: Record<string, THREE.BufferGeometry> = {
   'minecraft:stone_button':
     new THREE.BoxGeometry(6 / 16, 2 / 16, 4 / 16)
       .translate(0, -7 / 16, 0),
+  'minecraft:sticky_piston': texturedCube(
+    textures.sticky_piston_side,
+    textures.sticky_piston_side,
+    textures.sticky_piston_side,
+    textures.sticky_piston_side,
+    textures.sticky_piston_face,
+    textures.piston_back,
+  ),
+  'minecraft:piston': texturedCube(
+    textures.piston_side,
+    textures.piston_side,
+    textures.piston_side,
+    textures.piston_side,
+    textures.piston_face,
+    textures.piston_back,
+  ),
+  'minecraft:observer': texturedCube(
+    textures.observer_arrow,
+    textures.observer_side,
+    textures.observer_arrow,
+    textures.observer_side,
+    textures.observer_face,
+    textures.observer_back,
+  ),
+  'minecraft:note_block': singleTexturedCube(textures.note_block),
+  'minecraft:redstone_lamp': singleTexturedCube(textures.redstone_lamp_off),
+  'minecraft:redstone_lamp[lit=true]': singleTexturedCube(textures.redstone_lamp_lit),
+  'minecraft:redstone_block': singleTexturedCube(textures.redstone_block),
+
 };
 
 const ROTATE_UP = new THREE.Euler(0, 0, 0);
@@ -147,9 +218,17 @@ export class Renderer {
     const canvas = document.querySelector(cssQuery) as HTMLCanvasElement;
     this.renderer = new THREE.WebGLRenderer({ canvas });
 
-
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('lightblue');
+
+    scene.add(new THREE.Mesh(texturedCube(
+      textures.sticky_piston_side,
+      textures.sticky_piston_side,
+      textures.sticky_piston_side,
+      textures.sticky_piston_side,
+      textures.sticky_piston_face,
+      textures.piston_back,
+    ), new THREE.MeshStandardMaterial({ map: spriteSheet })));
 
     this.directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
     this.directionalLight.position.set(-1, 2, 4);
