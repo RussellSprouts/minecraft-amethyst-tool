@@ -1,6 +1,7 @@
 import { SchematicReader, Point, IntRange, p, parseP, parseBlockState, } from "./litematic";
 import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
+import { expected_shards_per_hour_per_face } from './optimization';
 
 const fileSelector = document.getElementById('litematic') as HTMLInputElement;
 fileSelector.addEventListener('change', async () => {
@@ -160,7 +161,7 @@ function main(schematic: SchematicReader) {
     [0, -1, 0],
     [0, 0, +1],
     [0, 0, -1],
-  ];
+  ] as const;
 
   const all_faces: Record<Point, boolean> = {};
   const accessible_faces: Record<Point, boolean> = {};
@@ -200,17 +201,22 @@ function main(schematic: SchematicReader) {
   console.log(
     'THEORETICAL MAX EFFICIENCY: ',
     percent(n_accessible_faces / n_all_faces));
+  console.log('EXPECTED SHARDS PER HOUR', expected_shards_per_hour_per_face * n_accessible_faces);
+
+  function percent(p: number) {
+    return `${Math.round((p * 100) * 100) / 100}% `;
+  }
 
   // Which side the button should attach to,
   // based on which direction there is a block.
   const button_by_face = [
-    'minecraft:stone_button[face=wall,facing=west]', // [+1, 0, 0],
-    'minecraft:stone_button[face=wall,facing=east]', // [-1, 0, 0],
-    'minecraft:stone_button[face=ceiling,facing=north]', // [0, +1, 0],
-    'minecraft:stone_button[face=floor,facing=north]',// [0, -1, 0],
-    'minecraft:stone_button[face=wall,facing=north]',// [0, 0, +1],
-    'minecraft:stone_button[face=wall,facing=south]',// [0, 0, -1],
-  ];
+    'minecraft:stone_button[face=wall,facing=west]',     // [+1, 0, 0]
+    'minecraft:stone_button[face=wall,facing=east]',     // [-1, 0, 0]
+    'minecraft:stone_button[face=ceiling,facing=north]', // [0, +1, 0]
+    'minecraft:stone_button[face=floor,facing=north]',   // [0, -1, 0]
+    'minecraft:stone_button[face=wall,facing=north]',    // [0, 0, +1]
+    'minecraft:stone_button[face=wall,facing=south]',    // [0, 0, -1]
+  ] as const;
   for (const unreachable_block of Object.keys(unreachable_faces)) {
     const [x, y, z] = unreachable_block.split(/:/g).map(v => +v);
     for (let i = 0; i < faces.length; i++) {
@@ -262,27 +268,6 @@ function main(schematic: SchematicReader) {
     } else if (y_slime[p(x, fy, z)]) {
       y_slime_used[p(x, fy, z)] = true;
     }
-  }
-
-  for (const block of Object.keys(x_slime) as Point[]) {
-    const [_x, y, z] = block.split(/:/g).map(v => +v);
-    // const mesh = new THREE.Mesh(geometry, x_slime_used[block] ? slime : redundant_slime);
-    // mesh.position.set(max_bud_x + 3, y, z);
-    // scene.add(mesh);
-  }
-
-  for (const block of Object.keys(y_slime) as Point[]) {
-    const [x, _y, z] = block.split(/:/g).map(v => +v);
-    // const mesh = new THREE.Mesh(geometry, y_slime_used[block] ? slime : redundant_slime);
-    // mesh.position.set(x, max_bud_y + 3, z);
-    // scene.add(mesh);
-  }
-
-  for (const block of Object.keys(z_slime) as Point[]) {
-    const [x, y, _z] = block.split(/:/g).map(v => +v);
-    // const mesh = new THREE.Mesh(geometry, z_slime_used[block] ? slime : redundant_slime);
-    // mesh.position.set(x, y, max_bud_z + 3);
-    // scene.add(mesh);
   }
 
   const colors = [
@@ -524,69 +509,9 @@ function main(schematic: SchematicReader) {
   // 2. For each possible position of a flying machine, expand outward by converting
   //    blocks to slime until you reach push limit.
 
-  const random_tick_speed = 3;
-  const blocks_per_subchunk = 16 * 16 * 16;
-  const avg_ticks_between_random_ticks =
-    blocks_per_subchunk / random_tick_speed;
-  const budding_amethyst_chance_to_tick = 0.2;
-  const faces_per_amethyst = 6;
-  const expected_ticks_for_one_stage = avg_ticks_between_random_ticks /
-    budding_amethyst_chance_to_tick * faces_per_amethyst;
-  console.log(
-    'EXPECTED TICKS FOR ONE STAGE OF GROWTH', expected_ticks_for_one_stage);
-  const optimal_time = 167 * 60 * 20;
-
-  console.log('TICKS BETWEEN HARVESTS', optimal_time);
-  const chance_0 = binomial(0, optimal_time, 1 / expected_ticks_for_one_stage);
-  const chance_1 = binomial(1, optimal_time, 1 / expected_ticks_for_one_stage);
-  const chance_2 = binomial(2, optimal_time, 1 / expected_ticks_for_one_stage);
-  const chance_3 = binomial(3, optimal_time, 1 / expected_ticks_for_one_stage);
-  const chance_at_least_4 = 1 - chance_0 - chance_1 - chance_2 - chance_3;
-
-  console.log(
-    'PROBABILITIES:', 'k=0:', chance_0, 'k=1:', chance_1, 'k=2:', chance_2,
-    'k=3:', chance_3, 'k>=4:', chance_at_least_4);
-
-  const shards_dropped_when_broken = 2;
-  const expected_shards_per_harvest =
-    chance_at_least_4 * n_accessible_faces * shards_dropped_when_broken;
-
-  console.log('EXPECTED SHARDS PER HARVEST', expected_shards_per_harvest);
-
-  const expected_shards_per_hour =
-    expected_shards_per_harvest / optimal_time * 60 * 60 * 20;
-
-  console.log('EXPECTED SHARDS PER HOUR', expected_shards_per_hour);
-
   document.getElementById('save')!.onclick = () => {
     saveFile(renderer.toSchematic().save(), 'geode-farm-export.litematic');
   };
-
-  function binomial(k: number, n: number, p: number) {
-    return combination(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
-  }
-
-  function combination(n: number, k: number) {
-    if (n == k) {
-      return 1;
-    }
-    k = k < n - k ? n - k : k;
-    return Number(product_range(k + 1, n) / product_range(1, n - k));
-  }
-
-  function product_range(a: number | bigint, b: number | bigint): bigint {
-    a = BigInt(a);
-    b = BigInt(b);
-    let product = 1n;
-    for (let i = a; i <= b; i++) {
-      product *= i;
-    }
-    return product;
-  }
-
-  function percent(p: number) {
-    return `${Math.round((p * 100) * 100) / 100}% `;
-  }
 
   // renderer.animate(-1, 5, (frame) => {
   //   const y = schematic.height - 1 - (frame % schematic.height);
