@@ -71,8 +71,8 @@ function texturedCube(
     east: number,
     north: number,
     west: number,
-    down: number,
-    up: number]): THREE.BufferGeometry {
+    up: number,
+    down: number]): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position',
     new THREE.BufferAttribute(positions, 3));
@@ -107,8 +107,8 @@ function singleColorMaterial(color: string, opacity = 1) {
 
 const TEXTURES: Record<string, THREE.Material | THREE.Material[] | undefined> = {
   'minecraft:budding_amethyst': singleColorMaterial('purple'),
-  'minecraft:obsidian': singleColorMaterial('#120d1d'),
   'minecraft:slime_block': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, opacity: 0.75 }),
+  'minecraft:scaffolding': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, side: THREE.DoubleSide, alphaTest: 0.5 }),
   'minecraft:calcite': singleColorMaterial('#aaa'),
   'minecraft:smooth_basalt': singleColorMaterial('#333'),
   'minecraft:amethyst_block': singleColorMaterial('#bf40bf'),
@@ -145,11 +145,28 @@ const MODELS: Record<string, THREE.BufferGeometry> = {
     textures.observer_face,
     textures.observer_back,
   ),
+  'minecraft:scaffolding[bottom=true]': texturedCube(
+    textures.scaffolding_side,
+    textures.scaffolding_side,
+    textures.scaffolding_side,
+    textures.scaffolding_side,
+    textures.scaffolding_top,
+    textures.scaffolding_top
+  ),
+  'minecraft:scaffolding': texturedCube(
+    textures.scaffolding_side,
+    textures.scaffolding_side,
+    textures.scaffolding_side,
+    textures.scaffolding_side,
+    textures.scaffolding_top,
+    textures.empty,
+  ),
   'minecraft:note_block': singleTexturedCube(textures.note_block),
   'minecraft:redstone_lamp': singleTexturedCube(textures.redstone_lamp_off),
   'minecraft:redstone_lamp[lit=true]': singleTexturedCube(textures.redstone_lamp_lit),
   'minecraft:redstone_block': singleTexturedCube(textures.redstone_block),
   'minecraft:slime_block': singleTexturedCube(textures.slime_block),
+  'minecraft:obsidian': singleTexturedCube(textures.obsidian),
 };
 
 const ROTATE_UP = new THREE.Euler(0, 0, 0);

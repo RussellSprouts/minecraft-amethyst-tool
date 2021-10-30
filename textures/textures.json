@@ -110,14 +110,46 @@
     "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
     "sourceSize": { "w": 16, "h": 16 },
     "duration": 100
+   },
+   "14": {
+    "frame": { "x": 224, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "15": {
+    "frame": { "x": 240, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "16": {
+    "frame": { "x": 256, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "17": {
+    "frame": { "x": 272, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
    }
  },
  "meta": {
-  "app": "http://www.aseprite.org/",
-  "version": "1.2.29-x64",
+  "app": "https://www.aseprite.org/",
+  "version": "1.2.30-x64",
   "image": "all.png",
   "format": "RGBA8888",
-  "size": { "w": 224, "h": 16 },
+  "size": { "w": 288, "h": 16 },
   "scale": "1",
   "frameTags": [
    { "name": "sticky_piston_face", "from": 0, "to": 0, "direction": "forward" },
@@ -132,8 +164,12 @@
    { "name": "note_block", "from": 9, "to": 9, "direction": "forward" },
    { "name": "redstone_lamp_off", "from": 10, "to": 10, "direction": "forward" },
    { "name": "redstone_lamp_lit", "from": 11, "to": 11, "direction": "forward" },
-   { "name": "redstone_block", "from": 12, "to": 13, "direction": "forward" },
-   { "name": "slime_block", "from": 13, "to": 13, "direction": "forward" }
+   { "name": "redstone_block", "from": 12, "to": 12, "direction": "forward" },
+   { "name": "slime_block", "from": 13, "to": 13, "direction": "forward" },
+   { "name": "obsidian", "from": 14, "to": 14, "direction": "forward" },
+   { "name": "scaffolding_top", "from": 15, "to": 15, "direction": "forward" },
+   { "name": "scaffolding_side", "from": 16, "to": 16, "direction": "forward" },
+   { "name": "empty", "from": 17, "to": 17, "direction": "forward" }
   ],
   "layers": [
    { "name": "Layer 1", "opacity": 255, "blendMode": "normal" }
