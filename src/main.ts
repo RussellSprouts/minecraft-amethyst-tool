@@ -506,7 +506,6 @@ function main(schematic: SchematicReader) {
   renderer.setBlockState(fx + 2, fy + 2, fz - 14, 'minecraft:scaffolding');
   renderer.setBlockState(fx + 2, fy + 2, fz - 16, 'minecraft:scaffolding[bottom=true]');
 
-
   // The problem of generating the flying machines:
   // 1. Start with all slime blocks initialized as regular blocks
   // 2. For each possible position of a flying machine, expand outward by converting

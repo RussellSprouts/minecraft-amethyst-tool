@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { p, parseP, Point, SchematicWriter } from './litematic';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import * as textures from './textures/index';
+import * as textures from '../textures/index';
 
 const spriteSheet = new THREE.TextureLoader().load(textures.image);
 spriteSheet.minFilter = THREE.NearestFilter;

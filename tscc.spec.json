@@ -1,6 +1,6 @@
 {
     "modules": {
-        "bundle": "main.ts"
+        "bundle": "src/main.ts"
     },
     "external": {
         "pako": "pako",
