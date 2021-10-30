@@ -8,7 +8,7 @@
         "three/examples/jsm/controls/OrbitControls": "OrbitControls"
     },
     "compilerFlags": {
-        "language_out": "ECMASCRIPT_2020"
-    },
-    "prefix": "out/"
+        "language_out": "ECMASCRIPT_2020",
+        "create_source_map": "%outname%.map"
+    }
 }

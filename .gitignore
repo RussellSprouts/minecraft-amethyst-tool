@@ -1,3 +1,4 @@
 node_modules/
-out/
+bundle.js
+bundle.js.map
 .tscc_temp
