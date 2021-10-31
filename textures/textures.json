@@ -142,14 +142,62 @@
     "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
     "sourceSize": { "w": 16, "h": 16 },
     "duration": 100
+   },
+   "18": {
+    "frame": { "x": 288, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "19": {
+    "frame": { "x": 304, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "20": {
+    "frame": { "x": 320, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "21": {
+    "frame": { "x": 336, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "22": {
+    "frame": { "x": 352, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "23": {
+    "frame": { "x": 368, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
    }
  },
  "meta": {
-  "app": "https://www.aseprite.org/",
+  "app": "http://www.aseprite.org/",
   "version": "1.2.30-x64",
   "image": "all.png",
   "format": "RGBA8888",
-  "size": { "w": 288, "h": 16 },
+  "size": { "w": 384, "h": 16 },
   "scale": "1",
   "frameTags": [
    { "name": "sticky_piston_face", "from": 0, "to": 0, "direction": "forward" },
@@ -169,7 +217,13 @@
    { "name": "obsidian", "from": 14, "to": 14, "direction": "forward" },
    { "name": "scaffolding_top", "from": 15, "to": 15, "direction": "forward" },
    { "name": "scaffolding_side", "from": 16, "to": 16, "direction": "forward" },
-   { "name": "empty", "from": 17, "to": 17, "direction": "forward" }
+   { "name": "empty", "from": 17, "to": 17, "direction": "forward" },
+   { "name": "repeater_bottom", "from": 18, "to": 18, "direction": "forward" },
+   { "name": "repeater_top", "from": 19, "to": 19, "direction": "forward" },
+   { "name": "repeater_top_lit", "from": 20, "to": 20, "direction": "forward" },
+   { "name": "repeater_pieces", "from": 21, "to": 21, "direction": "forward" },
+   { "name": "comparator_top", "from": 22, "to": 22, "direction": "forward" },
+   { "name": "comparator_top_lit", "from": 23, "to": 23, "direction": "forward" }
   ],
   "layers": [
    { "name": "Layer 1", "opacity": 255, "blendMode": "normal" }

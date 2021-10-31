@@ -505,6 +505,9 @@ function main(schematic: SchematicReader) {
   renderer.setBlockState(fx + 2, fy + 2, fz - 12, 'minecraft:redstone_block');
   renderer.setBlockState(fx + 2, fy + 2, fz - 14, 'minecraft:scaffolding');
   renderer.setBlockState(fx + 2, fy + 2, fz - 16, 'minecraft:scaffolding[bottom=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 18, 'minecraft:repeater[delay=1,facing=east,powered=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 20, 'minecraft:comparator[facing=north,mode=compare,powered=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 22, 'minecraft:comparator[facing=north,mode=subtract,powered=false]');
 
   // The problem of generating the flying machines:
   // 1. Start with all slime blocks initialized as regular blocks
