@@ -143,6 +143,11 @@ export class SchematicReader {
   }
 
   getBlock(x: number, y: number, z: number): string {
+    if (x < 0 || x >= this.width
+      || y < 0 || y >= this.height
+      || z < 0 || z >= this.length) {
+      return 'minecraft:air';
+    }
     const index = x + this.width * (z + this.length * y);
     return this.palette[this.blocks[index]];
   }
