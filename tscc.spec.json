@@ -1,6 +1,12 @@
 {
     "modules": {
-        "bundle": "src/main.ts"
+        "renderer": "src/renderer.ts",
+        "main": {
+            "entry": "src/main.ts",
+            "dependencies": [
+                "renderer"
+            ]
+        }
     },
     "external": {
         "pako": "pako",
@@ -10,5 +16,6 @@
     "compilerFlags": {
         "language_out": "ECMASCRIPT_2020",
         "create_source_map": "%outname%.map"
-    }
+    },
+    "prefix": "out/"
 }
