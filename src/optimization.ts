@@ -64,3 +64,12 @@ function product_range(a: number | bigint, b: number | bigint): bigint {
   }
   return product;
 }
+
+
+function expectedShardsFromSingleFortuneFacePerHour() {
+  const average_shards_dropped_with_fortune = 8.8;
+  const expected_ticks_for_full_growth = expected_ticks_for_one_stage * 4;
+  return expected_ticks_for_full_growth * average_shards_dropped_with_fortune / (60 * 60 * 20);
+}
+
+console.log('EXPECTED OUTPUT PER HOUR', expectedShardsFromSingleFortuneFacePerHour());

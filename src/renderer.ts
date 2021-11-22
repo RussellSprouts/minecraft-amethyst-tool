@@ -167,7 +167,82 @@ function singleColorMaterial(color: string, opacity = 1) {
   });
 }
 
-const repeaterGeometry = memoize(function repeaterGeometry(ticks: 1 | 2 | 3 | 4, powered: boolean): THREE.BufferGeometry {
+function hopperGeometry(facingSide: boolean) {
+  return THREE.BufferGeometryUtils.mergeBufferGeometries([
+    texturedCube(
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      2, 6, 16,
+      0, 10, 0
+    ),
+    texturedCube(
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      2, 6, 16,
+      14, 10, 0
+    ),
+    texturedCube(
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      12, 6, 2,
+      2, 10, 14
+    ),
+    texturedCube(
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      12, 6, 2,
+      2, 10, 0
+    ),
+    texturedCube(
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      12, 1, 12,
+      2, 10, 2
+    ),
+    texturedCube(
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      8, 6, 8,
+      4, 4, 4
+    ),
+    texturedCube(
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      4, 4, 4,
+      ...facingSide ? [6, 4, 0] : [6, 0, 6]
+    ),
+  ]);
+}
+
+function repeaterGeometry(ticks: 1 | 2 | 3 | 4, powered: boolean): THREE.BufferGeometry {
   const textureOffset = powered ? 4 : 0;
   return THREE.BufferGeometryUtils.mergeBufferGeometries([
     // repeater body
@@ -203,9 +278,9 @@ const repeaterGeometry = memoize(function repeaterGeometry(ticks: 1 | 2 | 3 | 4,
       6, 2, 11, 1
     )
   ]);
-});
+}
 
-const comparatorGeometry = memoize(function comparatorGeometry(mode: 'compare' | 'subtract', powered: boolean): THREE.BufferGeometry {
+function comparatorGeometry(mode: 'compare' | 'subtract', powered: boolean): THREE.BufferGeometry {
   const textureOffset = powered ? 4 : 0;
   const modeTextureOffset = mode === 'subtract' ? 4 : 0;
   return THREE.BufferGeometryUtils.mergeBufferGeometries([
@@ -255,23 +330,56 @@ const comparatorGeometry = memoize(function comparatorGeometry(mode: 'compare' |
       1
     ),
   ]);
-});
+}
+
+function amethystShardGeometry(texture: number) {
+  return THREE.BufferGeometryUtils.mergeBufferGeometries([
+    texturedCube(
+      texture,
+      textures.empty,
+      texture,
+      textures.empty,
+      textures.empty,
+      textures.empty,
+      16, 16, 16,
+      0, 0, 0,
+      8
+    ),
+    texturedCube(
+      textures.empty,
+      texture,
+      textures.empty,
+      texture,
+      textures.empty,
+      textures.empty,
+      16, 16, 16,
+      0, 0, 0,
+      8
+    ),
+  ]).rotateY(Math.PI / 4);
+}
+
+const DEFAULT_TRANSPARENT = new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, alphaTest: 0.5 });
 
 const TEXTURES: Record<string, THREE.Material | THREE.Material[] | undefined> = {
-  'minecraft:budding_amethyst': singleColorMaterial('purple'),
-  'minecraft:slime_block': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, opacity: 0.75 }),
+  'minecraft:slime_block': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, alphaTest: 0.5, opacity: 0.75 }),
   'minecraft:scaffolding': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, side: THREE.DoubleSide, alphaTest: 0.5 }),
   'minecraft:calcite': singleColorMaterial('#aaa'),
   'minecraft:smooth_basalt': singleColorMaterial('#333'),
-  'minecraft:amethyst_block': singleColorMaterial('#bf40bf'),
+  'minecraft:amethyst_block': singleColorMaterial('#7457a5'),
   'minecraft:stone_button': singleColorMaterial('#888'),
-  'minecraft:repeater': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, alphaTest: 0.5 }),
-  'minecraft:comparator': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, alphaTest: 0.5 }),
+  'minecraft:hopper': singleColorMaterial('#333'),
+  'minecraft:repeater': DEFAULT_TRANSPARENT,
+  'minecraft:comparator': DEFAULT_TRANSPARENT,
+  'minecraft:small_amethyst_bud': DEFAULT_TRANSPARENT,
+  'minecraft:medium_amethyst_bud': DEFAULT_TRANSPARENT,
+  'minecraft:large_amethyst_bud': DEFAULT_TRANSPARENT,
+  'minecraft:amethyst_cluster': DEFAULT_TRANSPARENT,
   'default': new THREE.MeshStandardMaterial({ map: spriteSheet }),
 };
 
 const MODELS: Record<string, THREE.BufferGeometry> = {
-  'default': new THREE.BoxGeometry(1, 1, 1),
+  'default': singleTexturedCube(textures.missing),
   'minecraft:stone_button':
     new THREE.BoxGeometry(6 / 16, 2 / 16, 4 / 16)
       .translate(0, -7 / 16, 0),
@@ -317,35 +425,47 @@ const MODELS: Record<string, THREE.BufferGeometry> = {
   ),
   ...Object.fromEntries(
     ([1, 2, 3, 4] as const).flatMap(delay =>
-      [true, false].flatMap(powered =>
-        ['east', 'west', 'north', 'south'].map(facing =>
+      [true, false].flatMap(powered => {
+        const geometry = repeaterGeometry(delay, powered);
+        return ['east', 'west', 'north', 'south'].map(facing =>
           [
             `minecraft:repeater[delay=${delay},facing=${facing},powered=${powered}]`,
-            repeaterGeometry(delay, powered)
-          ])))),
+            geometry
+          ]);
+      }
+      ))),
   ...Object.fromEntries(
     [true, false].flatMap(powered =>
-      (['compare', 'subtract'] as const).flatMap(mode =>
-        ['east', 'west', 'north', 'south'].map(facing =>
+      (['compare', 'subtract'] as const).flatMap(mode => {
+        const geometry = comparatorGeometry(mode, powered);
+        return ['east', 'west', 'north', 'south'].map(facing =>
           [
             `minecraft:comparator[facing=${facing},mode=${mode},powered=${powered}]`,
-            comparatorGeometry(mode, powered)
-          ])))),
+            geometry
+          ]);
+      }
+      ))),
   'minecraft:note_block': singleTexturedCube(textures.note_block),
   'minecraft:redstone_lamp': singleTexturedCube(textures.redstone_lamp_off),
   'minecraft:redstone_lamp[lit=true]': singleTexturedCube(textures.redstone_lamp_lit),
   'minecraft:redstone_block': singleTexturedCube(textures.redstone_block),
   'minecraft:slime_block': singleTexturedCube(textures.slime_block),
   'minecraft:obsidian': singleTexturedCube(textures.obsidian),
+  'minecraft:budding_amethyst': singleTexturedCube(textures.budding_amethyst),
+  'minecraft:hopper': hopperGeometry(true),
+  'minecraft:hopper[facing=down]': hopperGeometry(false),
+  'minecraft:small_amethyst_bud': amethystShardGeometry(textures.shard_1),
+  'minecraft:medium_amethyst_bud': amethystShardGeometry(textures.shard_2),
+  'minecraft:large_amethyst_bud': amethystShardGeometry(textures.shard_3),
+  'minecraft:amethyst_cluster': amethystShardGeometry(textures.shard_4),
 };
 
-const ROTATE_UP = new THREE.Euler(0, 0, 0);
-const ROTATE_DOWN = new THREE.Euler(Math.PI, 0, 0)
+const DEFAULT_ROTATION = new THREE.Euler(0, 0, 0);
+const ROTATE_DOWN = new THREE.Euler(Math.PI, 0, 0);
 const ROTATE_NORTH = new THREE.Euler(-Math.PI / 2, 0, 0);
 const ROTATE_SOUTH = new THREE.Euler(-Math.PI / 2, 0, Math.PI);
 const ROTATE_EAST = new THREE.Euler(-Math.PI / 2, 0, -Math.PI / 2);
 const ROTATE_WEST = new THREE.Euler(-Math.PI / 2, 0, Math.PI / 2);
-const SPIN_NORTH = new THREE.Euler(0, 0, 0);
 const SPIN_WEST = new THREE.Euler(0, Math.PI / 2, 0);
 const SPIN_SOUTH = new THREE.Euler(0, Math.PI, 0);
 const SPIN_EAST = new THREE.Euler(0, -Math.PI / 2, 0);
@@ -369,10 +489,10 @@ function addProperties(block: string, properties: Record<string, string>): strin
  */
 function generateSpins(block: string): Record<string, THREE.Euler> {
   return {
-    [addProperties(block, { facing: 'north' })]: SPIN_NORTH,
-    [addProperties(block, { facing: 'south' })]: SPIN_SOUTH,
-    [addProperties(block, { facing: 'east' })]: SPIN_EAST,
-    [addProperties(block, { facing: 'west' })]: SPIN_WEST,
+    [addProperties(block, { 'facing': 'north' })]: DEFAULT_ROTATION,
+    [addProperties(block, { 'facing': 'south' })]: SPIN_SOUTH,
+    [addProperties(block, { 'facing': 'east' })]: SPIN_EAST,
+    [addProperties(block, { 'facing': 'west' })]: SPIN_WEST,
   }
 }
 
@@ -384,7 +504,7 @@ function generateSpins(block: string): Record<string, THREE.Euler> {
  */
 function generateRotations(block: string): Record<string, THREE.Euler> {
   return {
-    [addProperties(block, { 'facing': 'up' })]: ROTATE_UP,
+    [addProperties(block, { 'facing': 'up' })]: DEFAULT_ROTATION,
     [addProperties(block, { 'facing': 'down' })]: ROTATE_DOWN,
     [addProperties(block, { 'facing': 'north' })]: ROTATE_NORTH,
     [addProperties(block, { 'facing': 'south' })]: ROTATE_SOUTH,
@@ -393,24 +513,33 @@ function generateRotations(block: string): Record<string, THREE.Euler> {
   };
 }
 
+Object.fromEntries([
+  ['a', 'A'],
+  ['b', 'B'],
+]) // => {a: 'A', b: 'B'}
+
 const ROTATIONS: Record<string, THREE.Euler> = {
-  'default': ROTATE_UP,
+  'default': DEFAULT_ROTATION,
   ...generateRotations('minecraft:observer'),
   ...generateRotations('minecraft:sticky_piston'),
   ...generateRotations('minecraft:piston'),
-  ...generateSpins('minecraft:repeater[delay=1,powered=true]'),
-  ...generateSpins('minecraft:repeater[delay=2,powered=true]'),
-  ...generateSpins('minecraft:repeater[delay=3,powered=true]'),
-  ...generateSpins('minecraft:repeater[delay=4,powered=true]'),
-  ...generateSpins('minecraft:repeater[delay=1,powered=false]'),
-  ...generateSpins('minecraft:repeater[delay=2,powered=false]'),
-  ...generateSpins('minecraft:repeater[delay=3,powered=false]'),
-  ...generateSpins('minecraft:repeater[delay=4,powered=false]'),
+  ...generateRotations('minecraft:small_amethyst_bud'),
+  ...generateRotations('minecraft:medium_amethyst_bud'),
+  ...generateRotations('minecraft:large_amethyst_bud'),
+  ...generateRotations('minecraft:amethyst_cluster'),
+
+  ...Object.fromEntries(
+    [1, 2, 3, 4].flatMap(delay =>
+      [true, false].map(powered =>
+        Object.entries(
+          generateSpins(`minecraft:repeater[delay=${delay},powered=${powered}]`))))),
 
   ...generateSpins('minecraft:comparator[mode=compare,powered=false]'),
   ...generateSpins('minecraft:comparator[mode=compare,powered=true]'),
   ...generateSpins('minecraft:comparator[mode=subtract,powered=false]'),
   ...generateSpins('minecraft:comparator[mode=subtract,powered=true]'),
+
+  ...generateSpins('minecraft:hopper'),
 
   // buttons don't use the usual rotations, because they
   // have 4 separate rotations for floors and ceilings.
@@ -450,22 +579,23 @@ export class Renderer {
   directionalLight: THREE.DirectionalLight;
   ambientLight: THREE.AmbientLight;
   pointLight: THREE.PointLight;
+  raycaster: THREE.Raycaster;
+  mouse: THREE.Vector2;
 
   constructor(cssQuery: string) {
     const canvas = document.querySelector(cssQuery) as HTMLCanvasElement;
     this.renderer = new THREE.WebGLRenderer({ canvas });
+    this.mouse = new THREE.Vector2();
+    canvas.addEventListener('mousemove', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      this.mouse.x = ((event.clientX - rect.left) / canvas.clientWidth) * 2 - 1;
+      this.mouse.y = -((event.clientY - rect.top) / canvas.clientHeight) * 2 + 1;
+      this.requestRenderIfNotRequested();
+    });
+    this.raycaster = new THREE.Raycaster();
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('lightblue');
-
-    scene.add(new THREE.Mesh(texturedCube(
-      textures.sticky_piston_side,
-      textures.sticky_piston_side,
-      textures.sticky_piston_side,
-      textures.sticky_piston_side,
-      textures.sticky_piston_face,
-      textures.piston_back,
-    ), new THREE.MeshStandardMaterial({ map: spriteSheet })));
 
     this.directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
     this.directionalLight.position.set(-1, 2, 4);
@@ -541,6 +671,14 @@ export class Renderer {
       this.camera.updateProjectionMatrix();
     }
 
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    for (const object of this.scene.children) {
+      object.visible = true;
+    }
+    const intersects = this.raycaster.intersectObjects(this.scene.children);
+    for (const object of intersects) {
+      //object.object.visible = false;
+    }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }

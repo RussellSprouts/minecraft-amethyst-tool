@@ -91,68 +91,123 @@ function main(schematic: SchematicReader) {
 
   // Display the projected planes, and find the blocks which should be part of
   // the sweepers
-  let pattern = '';
   for (const x of new IntRange(min_bud_x, max_bud_x + 1).expand(1)) {
     for (const z of new IntRange(min_bud_z, max_bud_z + 1).expand(1)) {
-      if (y_coords[p(x, fy, z)]) {
-        pattern += '#';
-        // const mesh = new THREE.Mesh(geometry, obsidian);
-        // mesh.position.set(x, max_bud_y + 3, z);
-        // scene.add(mesh);
-      } else if (
-        y_coords[p(x - 1, fy, z)] || y_coords[p(x + 1, fy, z)] ||
-        y_coords[p(x, fy, z - 1)] || y_coords[p(x, fy, z + 1)]) {
+      if (
+        !y_coords[p(x, fy, z)] &&
+        (y_coords[p(x - 1, fy, z)] || y_coords[p(x + 1, fy, z)] ||
+          y_coords[p(x, fy, z - 1)] || y_coords[p(x, fy, z + 1)])) {
         y_slime[p(x, fy, z)] = true;
-        pattern += '.';
-      } else {
-        pattern += ' ';
       }
     }
-    pattern += '\n';
   }
-  console.log('y', pattern);
 
-  pattern = '';
   for (const y of new IntRange(min_bud_y, max_bud_y + 1).expand(1)) {
     for (const z of new IntRange(min_bud_z, max_bud_z + 1).expand(1)) {
-      if (x_coords[p(fx, y, z)]) {
-        pattern += '#';
-        // const mesh = new THREE.Mesh(geometry, obsidian);
-        // mesh.position.set(max_bud_x + 3, y, z);
-        // scene.add(mesh);
-      } else if (
-        x_coords[p(fx, y - 1, z)] || x_coords[p(fx, y + 1, z)] ||
-        x_coords[p(fx, y, z - 1)] || x_coords[p(fx, y, z + 1)]) {
+      if (
+        !x_coords[p(fx, y, z)] &&
+        (x_coords[p(fx, y - 1, z)] || x_coords[p(fx, y + 1, z)] ||
+          x_coords[p(fx, y, z - 1)] || x_coords[p(fx, y, z + 1)])) {
         x_slime[p(fx, y, z)] = true;
-        pattern += '.';
-      } else {
-        pattern += ' ';
       }
     }
-    pattern += '\n';
   }
-  console.log('x', pattern);
 
-  pattern = '';
   for (const x of new IntRange(min_bud_x, max_bud_x + 1).expand(1)) {
     for (const y of new IntRange(min_bud_y, max_bud_y + 1).expand(1)) {
-      if (z_coords[p(x, y, fz)]) {
-        pattern += '#';
-        // const mesh = new THREE.Mesh(geometry, obsidian);
-        // mesh.position.set(x, y, max_bud_z + 3);
-        // scene.add(mesh);
-      } else if (
-        z_coords[p(x - 1, y, fz)] || z_coords[p(x + 1, y, fz)] ||
-        z_coords[p(x, y - 1, fz)] || z_coords[p(x, y + 1, fz)]) {
+      if (
+        !z_coords[p(x, y, fz)] &&
+        (z_coords[p(x - 1, y, fz)] || z_coords[p(x + 1, y, fz)] ||
+          z_coords[p(x, y - 1, fz)] || z_coords[p(x, y + 1, fz)])) {
         z_slime[p(x, y, fz)] = true;
-        pattern += '.';
-      } else {
-        pattern += ' ';
       }
     }
-    pattern += '\n';
   }
-  console.log('z', pattern);
+
+  // Flood-fills from the given [a,b] block, checking
+  // if at least nExpand blocks can go into a sweeper.
+  function canExpandTo(
+    nExpand: number,
+    coords: Record<Point, boolean>,
+    p: (a: number, b: number) => Point,
+    parseP: (point: Point) => [number, number],
+    a: number,
+    b: number
+  ) {
+    const processed: Record<Point, boolean> = {};
+    const toProcess = [
+      p(a, b)
+    ];
+    let nFilled = 0;
+
+    while (toProcess.length && nFilled < nExpand) {
+      const point = toProcess.shift()!;
+      if (processed[point]) {
+        continue;
+      }
+      if (!coords[point]) {
+        const [aa, bb] = parseP(point);
+        nFilled += 1;
+        toProcess.push(
+          p(aa + 1, bb),
+          p(aa - 1, bb),
+          p(aa, bb + 1),
+          p(aa, bb - 1)
+        );
+      }
+      processed[point] = true;
+    }
+
+    return nFilled >= nExpand;
+  }
+
+  for (const point of Object.keys(x_slime) as Array<Point>) {
+    if (x_slime[point]) {
+      const [, y, z] = parseP(point);
+      if (!canExpandTo(
+        4,
+        x_coords,
+        (y, z) => p(fx, y, z),
+        (point) => { const [, y, z] = parseP(point); return [y, z]; },
+        y, z
+      )) {
+        x_slime[point] = false;
+        x_coords[point] = true;
+      }
+    }
+  }
+
+  for (const point of Object.keys(y_slime) as Array<Point>) {
+    if (y_slime[point]) {
+      const [x, , z] = parseP(point);
+      if (!canExpandTo(
+        5,
+        y_coords,
+        (x, z) => p(x, fy, z),
+        (point) => { const [x, , z] = parseP(point); return [x, z]; },
+        x, z
+      )) {
+        y_slime[point] = false;
+        y_coords[point] = true;
+      }
+    }
+  }
+
+  for (const point of Object.keys(z_slime) as Array<Point>) {
+    if (z_slime[point]) {
+      const [x, y] = parseP(point);
+      if (!canExpandTo(
+        4,
+        z_coords,
+        (x, y) => p(x, y, fz),
+        (point) => { const [x, y] = parseP(point); return [x, y]; },
+        x, y
+      )) {
+        z_slime[point] = false;
+        z_coords[point] = true;
+      }
+    }
+  }
 
   const faces = [
     [+1, 0, 0],
@@ -209,16 +264,25 @@ function main(schematic: SchematicReader) {
 
   // Which side the button should attach to,
   // based on which direction there is a block.
+  // const button_by_face = [
+  //   'minecraft:stone_button[face=wall,facing=west]',     // [+1, 0, 0]
+  //   'minecraft:stone_button[face=wall,facing=east]',     // [-1, 0, 0]
+  //   'minecraft:stone_button[face=ceiling,facing=north]', // [0, +1, 0]
+  //   'minecraft:stone_button[face=floor,facing=north]',   // [0, -1, 0]
+  //   'minecraft:stone_button[face=wall,facing=north]',    // [0, 0, +1]
+  //   'minecraft:stone_button[face=wall,facing=south]',    // [0, 0, -1]
+  // ] as const;
+
   const button_by_face = [
-    'minecraft:stone_button[face=wall,facing=west]',     // [+1, 0, 0]
-    'minecraft:stone_button[face=wall,facing=east]',     // [-1, 0, 0]
-    'minecraft:stone_button[face=ceiling,facing=north]', // [0, +1, 0]
-    'minecraft:stone_button[face=floor,facing=north]',   // [0, -1, 0]
-    'minecraft:stone_button[face=wall,facing=north]',    // [0, 0, +1]
-    'minecraft:stone_button[face=wall,facing=south]',    // [0, 0, -1]
+    'minecraft:amethyst_cluster[facing=west]', // [+1, 0, 0]
+    'minecraft:amethyst_cluster[facing=east]', // [-1, 0, 0]
+    'minecraft:amethyst_cluster[facing=down]', // [0, +1, 0]
+    'minecraft:amethyst_cluster[facing=up]',   // [0, -1, 0]
+    'minecraft:amethyst_cluster[facing=north]',// [0, 0, +1]
+    'minecraft:amethyst_cluster[facing=south]',// [0, 0, -1]
   ] as const;
-  for (const unreachable_block of Object.keys(unreachable_faces)) {
-    const [x, y, z] = unreachable_block.split(/:/g).map(v => +v);
+  for (const unreachable_block of Object.keys(unreachable_faces) as Array<Point>) {
+    const [x, y, z] = parseP(unreachable_block);
     for (let i = 0; i < faces.length; i++) {
       const [dx, dy, dz] = faces[i];
       if (schematic.getBlock(x + dx, y + dy, z + dz) === 'minecraft:budding_amethyst') {
@@ -239,33 +303,15 @@ function main(schematic: SchematicReader) {
   const y_slime_used: Record<Point, boolean> = {};
   const z_slime_used: Record<Point, boolean> = {};
 
-  // Find blocks that are surrounded by obsidian on all sides
-  // so that we can try to handle them from another axis.
-  function isSurroundedByObsidian(x: number, y: number, z: number) {
-    if (x_coords[p(x, y + 1, z)] && x_coords[p(x, y - 1, z)] && x_coords[p(x, y, z + 1)] && x_coords[p(x, y, z - 1)]) {
-      return true;
-    }
-    if (y_coords[p(x + 1, y, z)] && y_coords[p(x - 1, y, z)] && y_coords[p(x, y, z + 1)] && y_coords[p(x, y, z - 2)]) {
-      return true;
-    }
-    if (z_coords[p(x + 1, y, z)] && z_coords[p(x - 1, y, z)] && z_coords[p(x, y + 1, z)] && z_coords[p(x, y - 1, z)]) {
-      return true;
-    }
-  }
-
-  for (const block of Object.keys(accessible_faces)) {
-    const [x, y, z] = block.split(/:/g).map(v => +v);
-    if (x_slime[p(fx, y, z)] && !isSurroundedByObsidian(fx, y, z)) {
+  for (const block of Object.keys(accessible_faces) as Array<Point>) {
+    const [x, y, z] = parseP(block);
+    if (x_slime[p(fx, y, z)]) {
       x_slime_used[p(fx, y, z)] = true;
-    } else if (z_slime[p(x, y, fz)] && !isSurroundedByObsidian(x, y, fz)) {
+    }
+    else if (z_slime[p(x, y, fz)]) {
       z_slime_used[p(x, y, fz)] = true;
-    } else if (y_slime[p(x, fy, z)] && !isSurroundedByObsidian(x, fy, z)) {
-      y_slime_used[p(x, fy, z)] = true;
-    } else if (x_slime[p(fx, y, z)]) {
-      x_slime_used[p(fx, y, z)] = true;
-    } else if (z_slime[p(x, y, fz)]) {
-      z_slime_used[p(x, y, fz)] = true;
-    } else if (y_slime[p(x, fy, z)]) {
+    }
+    else if (y_slime[p(x, fy, z)]) {
       y_slime_used[p(x, fy, z)] = true;
     }
   }
@@ -496,18 +542,26 @@ function main(schematic: SchematicReader) {
     }
   }
 
-  renderer.setBlockState(fx + 2, fy + 2, fz - 0, 'minecraft:sticky_piston');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 2, 'minecraft:piston');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 4, 'minecraft:observer');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 6, 'minecraft:redstone_lamp');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 8, 'minecraft:redstone_lamp[lit=true]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 10, 'minecraft:note_block');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 12, 'minecraft:redstone_block');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 14, 'minecraft:scaffolding');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 16, 'minecraft:scaffolding[bottom=true]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 18, 'minecraft:repeater[delay=1,facing=east,powered=true]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 20, 'minecraft:comparator[facing=north,mode=compare,powered=true]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 22, 'minecraft:comparator[facing=north,mode=subtract,powered=false]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 0, 'minecraft:sticky_piston[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 1, 'minecraft:piston[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 2, 'minecraft:observer[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 3, 'minecraft:redstone_lamp[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 4, 'minecraft:redstone_lamp[lit=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 5, 'minecraft:note_block');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 6, 'minecraft:redstone_block');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 7, 'minecraft:scaffolding');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 8, 'minecraft:scaffolding[bottom=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 9, 'minecraft:repeater[delay=1,facing=east,powered=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 10, 'minecraft:comparator[facing=north,mode=compare,powered=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 11, 'minecraft:comparator[facing=north,mode=subtract,powered=false]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 12, 'minecraft:hopper[facing=north]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 13, 'minecraft:hopper[facing=down]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 14, 'minecraft:small_amethyst_bud[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 15, 'minecraft:medium_amethyst_bud[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 16, 'minecraft:large_amethyst_bud[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 17, 'minecraft:amethyst_cluster[facing=down]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 18, 'minecraft:stone_bricks');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 19, 'minecraft:amethyst_block');
 
   // The problem of generating the flying machines:
   // 1. Start with all slime blocks initialized as regular blocks
