@@ -238,14 +238,46 @@
     "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
     "sourceSize": { "w": 16, "h": 16 },
     "duration": 100
+   },
+   "30": {
+    "frame": { "x": 480, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "31": {
+    "frame": { "x": 496, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "32": {
+    "frame": { "x": 512, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "33": {
+    "frame": { "x": 528, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
    }
  },
  "meta": {
-  "app": "http://www.aseprite.org/",
+  "app": "https://www.aseprite.org/",
   "version": "1.2.30-x64",
   "image": "all.png",
   "format": "RGBA8888",
-  "size": { "w": 480, "h": 16 },
+  "size": { "w": 544, "h": 16 },
   "scale": "1",
   "frameTags": [
    { "name": "sticky_piston_face", "from": 0, "to": 0, "direction": "forward" },
@@ -269,15 +301,19 @@
    { "name": "repeater_bottom", "from": 18, "to": 18, "direction": "forward" },
    { "name": "repeater_top", "from": 19, "to": 19, "direction": "forward" },
    { "name": "repeater_top_lit", "from": 20, "to": 20, "direction": "forward" },
-   { "name": "repeater_pieces", "from": 21, "to": 21, "direction": "forward" },
-   { "name": "comparator_top", "from": 22, "to": 22, "direction": "forward" },
-   { "name": "comparator_top_lit", "from": 23, "to": 23, "direction": "forward" },
-   { "name": "budding_amethyst", "from": 24, "to": 24, "direction": "forward" },
-   { "name": "shard_1", "from": 25, "to": 25, "direction": "forward" },
-   { "name": "shard_2", "from": 26, "to": 26, "direction": "forward" },
-   { "name": "shard_3", "from": 27, "to": 27, "direction": "forward" },
-   { "name": "shard_4", "from": 28, "to": 28, "direction": "forward" },
-   { "name": "missing", "from": 29, "to": 29, "direction": "forward" }
+   { "name": "repeater_torch_off", "from": 21, "to": 21, "direction": "forward" },
+   { "name": "repeater_torch_on", "from": 22, "to": 22, "direction": "forward" },
+   { "name": "repeater_side", "from": 23, "to": 23, "direction": "forward" },
+   { "name": "torch_top_off", "from": 24, "to": 24, "direction": "forward" },
+   { "name": "torch_top_on", "from": 25, "to": 25, "direction": "forward" },
+   { "name": "comparator_top", "from": 26, "to": 26, "direction": "forward" },
+   { "name": "comparator_top_lit", "from": 27, "to": 27, "direction": "forward" },
+   { "name": "budding_amethyst", "from": 28, "to": 28, "direction": "forward" },
+   { "name": "shard_1", "from": 29, "to": 29, "direction": "forward" },
+   { "name": "shard_2", "from": 30, "to": 30, "direction": "forward" },
+   { "name": "shard_3", "from": 31, "to": 31, "direction": "forward" },
+   { "name": "shard_4", "from": 32, "to": 32, "direction": "forward" },
+   { "name": "missing", "from": 33, "to": 33, "direction": "forward" }
   ],
   "layers": [
    { "name": "Layer 1", "opacity": 255, "blendMode": "normal" }

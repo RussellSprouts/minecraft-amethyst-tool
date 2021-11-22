@@ -281,6 +281,7 @@ function main(schematic: SchematicReader) {
     'minecraft:amethyst_cluster[facing=north]',// [0, 0, +1]
     'minecraft:amethyst_cluster[facing=south]',// [0, 0, -1]
   ] as const;
+
   for (const unreachable_block of Object.keys(unreachable_faces) as Array<Point>) {
     const [x, y, z] = parseP(unreachable_block);
     for (let i = 0; i < faces.length; i++) {

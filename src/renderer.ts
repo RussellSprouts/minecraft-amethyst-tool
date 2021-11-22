@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { blockState, p, parseBlockState, parseP, Point, SchematicWriter, SCHEMATIC_SHAPE } from './litematic';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as textures from '../textures/index';
-import { memoize } from './util';
 
 const spriteSheet = new THREE.TextureLoader().load(textures.image);
 spriteSheet.minFilter = THREE.NearestFilter;
@@ -62,27 +61,6 @@ const positions = new Float32Array(positionsArr);
 const normals = new Float32Array(normalsArr);
 const uvs = new Float32Array(uvsArr);
 
-interface TextureSection {
-  n: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-function getUvExtents(texture: number | TextureSection): [startX: number, startY: number, endX: number, endY: number] {
-  if (typeof texture === 'number') {
-    return [texture / textures.nImages, 0, (texture + 1) / textures.nImages, 1];
-  } else {
-    return [
-      (texture.n + texture.x / 16) / textures.nImages,
-      1 - (texture.y + texture.height) / 16,
-      (texture.n + (texture.x + texture.width) / 16) / textures.nImages,
-      1 - texture.y / 16,
-    ];
-  }
-}
-
 /**
  * Creates geometry with UV mappings to map the faces
  * to the given textures.
@@ -102,12 +80,12 @@ function getUvExtents(texture: number | TextureSection): [startX: number, startY
  * @param overlap offsets the faces inward
  */
 function texturedCube(
-  south: number | TextureSection,
-  east: number | TextureSection,
-  north: number | TextureSection,
-  west: number | TextureSection,
-  up: number | TextureSection,
-  down: number | TextureSection,
+  south: number,
+  east: number,
+  north: number,
+  west: number,
+  up: number,
+  down: number,
   width = 16,
   height = 16,
   length = 16,
@@ -141,10 +119,24 @@ function texturedCube(
   geometry.setAttribute('normal',
     new THREE.BufferAttribute(normals, 3));
 
+  const sizes = [
+    [width, height],
+    [length, height],
+    [width, height],
+    [length, height],
+    [width, length],
+    [width, length]
+  ];
+
   const newUvs = new Float32Array(uvs);
   for (let i = 0; i < newUvs.length; i += 2) {
-    const face = faces[Math.floor(i / 8)];
-    const [uvStartX, uvStartY, uvEndX, uvEndY] = getUvExtents(face);
+    const faceIndex = Math.floor(i / 8);
+    const face = faces[faceIndex];
+    const [textureWidth, textureHeight] = sizes[faceIndex];
+    const uvStartX = face / textures.nImages;
+    const uvStartY = 1 - textureHeight / 16;
+    const uvEndX = (face + textureWidth / 16) / textures.nImages;
+    const uvEndY = 1;
     newUvs[i] = newUvs[i] ? uvEndX : uvStartX; // x
     newUvs[i + 1] = newUvs[i + 1] ? uvEndY : uvStartY; // y
   }
@@ -243,37 +235,38 @@ function hopperGeometry(facingSide: boolean) {
 }
 
 function repeaterGeometry(ticks: 1 | 2 | 3 | 4, powered: boolean): THREE.BufferGeometry {
-  const textureOffset = powered ? 4 : 0;
+  const torch_side = powered ? textures.repeater_torch_on : textures.repeater_torch_off;
+  const torch_top = powered ? textures.torch_top_on : textures.torch_top_off;
   return THREE.BufferGeometryUtils.mergeBufferGeometries([
     // repeater body
     texturedCube(
-      { n: textures.repeater_pieces, x: 0, y: 14, width: 16, height: 2, },
-      { n: textures.repeater_pieces, x: 0, y: 14, width: 16, height: 2, },
-      { n: textures.repeater_pieces, x: 0, y: 14, width: 16, height: 2, },
-      { n: textures.repeater_pieces, x: 0, y: 14, width: 16, height: 2, },
+      textures.repeater_side,
+      textures.repeater_side,
+      textures.repeater_side,
+      textures.repeater_side,
       powered ? textures.repeater_top_lit : textures.repeater_top,
       textures.repeater_bottom,
       16, 2, 16
     ),
     // moving torch
     texturedCube(
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: 8 + textureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: 8 + textureOffset, y: 0, width: 4, height: 4, },
+      torch_side,
+      torch_side,
+      torch_side,
+      torch_side,
+      torch_top,
+      torch_top,
       4, 6, 4,
       6, 2, 9 - 2 * ticks, 1
     ),
     // front torch
     texturedCube(
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: 8 + textureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: 8 + textureOffset, y: 0, width: 4, height: 4, },
+      torch_side,
+      torch_side,
+      torch_side,
+      torch_side,
+      torch_top,
+      torch_top,
       4, 6, 4,
       6, 2, 11, 1
     )
@@ -281,50 +274,53 @@ function repeaterGeometry(ticks: 1 | 2 | 3 | 4, powered: boolean): THREE.BufferG
 }
 
 function comparatorGeometry(mode: 'compare' | 'subtract', powered: boolean): THREE.BufferGeometry {
-  const textureOffset = powered ? 4 : 0;
-  const modeTextureOffset = mode === 'subtract' ? 4 : 0;
+  const front_torch = mode === 'subtract' ? textures.repeater_torch_on : textures.repeater_torch_off;
+  const front_torch_top = mode === 'subtract' ? textures.torch_top_on : textures.torch_top_off;
+  const back_torch = powered ? textures.repeater_torch_on : textures.repeater_torch_off;
+  const back_torch_top = powered ? textures.torch_top_on : textures.torch_top_off;
+
   return THREE.BufferGeometryUtils.mergeBufferGeometries([
     // comparator body
     texturedCube(
-      { n: textures.repeater_pieces, x: 0, y: 14, width: 16, height: 2, },
-      { n: textures.repeater_pieces, x: 0, y: 14, width: 16, height: 2, },
-      { n: textures.repeater_pieces, x: 0, y: 14, width: 16, height: 2, },
-      { n: textures.repeater_pieces, x: 0, y: 14, width: 16, height: 2, },
+      textures.repeater_side,
+      textures.repeater_side,
+      textures.repeater_side,
+      textures.repeater_side,
       powered ? textures.comparator_top_lit : textures.comparator_top,
       textures.repeater_bottom,
       16, 2, 16
     ),
     // front torch
     texturedCube(
-      { n: textures.repeater_pieces, x: modeTextureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: modeTextureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: modeTextureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: modeTextureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: 8 + modeTextureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: 8 + modeTextureOffset, y: 0, width: 4, height: 4, },
+      front_torch,
+      front_torch,
+      front_torch,
+      front_torch,
+      front_torch_top,
+      front_torch_top,
       4, 4, 4,
       6, mode === 'subtract' ? 2 : 1, 11,
       1
     ),
     // back torches
     texturedCube(
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: 8 + textureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: 8 + textureOffset, y: 0, width: 4, height: 4, },
+      back_torch,
+      back_torch,
+      back_torch,
+      back_torch,
+      back_torch_top,
+      back_torch_top,
       4, 6, 4,
       3, 2, 1,
       1
     ),
     texturedCube(
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: textureOffset, y: 0, width: 4, height: 6, },
-      { n: textures.repeater_pieces, x: 8 + textureOffset, y: 0, width: 4, height: 4, },
-      { n: textures.repeater_pieces, x: 8 + textureOffset, y: 0, width: 4, height: 4, },
+      back_torch,
+      back_torch,
+      back_torch,
+      back_torch,
+      back_torch_top,
+      back_torch_top,
       4, 6, 4,
       9, 2, 1,
       1
