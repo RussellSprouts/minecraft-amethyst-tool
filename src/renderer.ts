@@ -355,11 +355,51 @@ function amethystShardGeometry(texture: number) {
   ]).rotateY(Math.PI / 4);
 }
 
+const REDSTONE_BOTTOM_TEXTURE: Record<string, number> = {
+  '': textures.redstone_dot,
+  'n': textures.redstone_ns,
+  's': textures.redstone_ns,
+  'e': textures.redstone_ew,
+  'w': textures.redstone_ew,
+  'ns': textures.redstone_ns,
+  'ew': textures.redstone_ew,
+  'nw': textures.redstone_nw,
+  'ne': textures.redstone_ne,
+  'se': textures.redstone_se,
+  'sw': textures.redstone_sw,
+  'nsw': textures.redstone_nsw,
+  'new': textures.redstone_new,
+  'nse': textures.redstone_nse,
+  'sew': textures.redstone_sew,
+  'nsew': textures.redstone_nsew,
+};
+
+type RedstoneSide = 'none' | 'side' | 'up';
+function redstoneWireGeometry(north: RedstoneSide, south: RedstoneSide, east: RedstoneSide, west: RedstoneSide, power: number) {
+  const poweredOffset = power === 0 ? 1 : 0;
+  return texturedCube(
+    south === 'up' ? poweredOffset + textures.redstone_ns : textures.empty,
+    east === 'up' ? poweredOffset + textures.redstone_ns : textures.empty,
+    north === 'up' ? poweredOffset + textures.redstone_ns : textures.empty,
+    west === 'up' ? poweredOffset + textures.redstone_ns : textures.empty,
+    textures.empty,
+    REDSTONE_BOTTOM_TEXTURE[
+    (north === 'none' ? '' : 'n')
+    + (south === 'none' ? '' : 's')
+    + (east === 'none' ? '' : 'e')
+    + (west === 'none' ? '' : 'w')
+    ] + poweredOffset,
+    16, 16, 16, 0, 0, 0,
+    0.1 // offset a tiny bit to prevent texture fighting
+  )
+}
+
 const DEFAULT_TRANSPARENT = new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, alphaTest: 0.5 });
 
 const TEXTURES: Record<string, THREE.Material | THREE.Material[] | undefined> = {
   'minecraft:slime_block': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, alphaTest: 0.5, opacity: 0.75 }),
   'minecraft:scaffolding': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, side: THREE.DoubleSide, alphaTest: 0.5 }),
+  'minecraft:redstone_wire': new THREE.MeshStandardMaterial({ map: spriteSheet, transparent: true, side: THREE.DoubleSide, alphaTest: 0.5 }),
   'minecraft:calcite': singleColorMaterial('#aaa'),
   'minecraft:smooth_basalt': singleColorMaterial('#333'),
   'minecraft:amethyst_block': singleColorMaterial('#7457a5'),
@@ -418,6 +458,17 @@ const MODELS: Record<string, THREE.BufferGeometry> = {
     textures.scaffolding_side,
     textures.scaffolding_top,
     textures.empty,
+  ),
+  ...Object.fromEntries(
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].flatMap(power =>
+      (['none', 'side', 'up'] as const).flatMap(north =>
+        (['none', 'side', 'up'] as const).flatMap(south =>
+          (['none', 'side', 'up'] as const).flatMap(east =>
+            (['none', 'side', 'up'] as const).map(west =>
+              [
+                `minecraft:redstone_wire[east=${east},north=${north},power=${power},south=${south},west=${west}]`,
+                redstoneWireGeometry(north, south, east, west, power)
+              ])))))
   ),
   ...Object.fromEntries(
     ([1, 2, 3, 4] as const).flatMap(delay =>
@@ -517,8 +568,10 @@ Object.fromEntries([
 const ROTATIONS: Record<string, THREE.Euler> = {
   'default': DEFAULT_ROTATION,
   ...generateRotations('minecraft:observer'),
-  ...generateRotations('minecraft:sticky_piston'),
-  ...generateRotations('minecraft:piston'),
+  ...generateRotations('minecraft:sticky_piston[extended=false]'),
+  ...generateRotations('minecraft:sticky_piston[extended=true]'),
+  ...generateRotations('minecraft:piston[extended=false]'),
+  ...generateRotations('minecraft:piston[extended=true]'),
   ...generateRotations('minecraft:small_amethyst_bud'),
   ...generateRotations('minecraft:medium_amethyst_bud'),
   ...generateRotations('minecraft:large_amethyst_bud'),

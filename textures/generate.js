@@ -39,7 +39,7 @@ console.log('PNG FILE', pngFile);
         outputFile += `export const ${name} = ${Math.floor(frameData.frame.x / 16)};\n`;
     }
 
-    outputFile += `export const nImages = ${jsonData.meta.frameTags.length};\n`
+    outputFile += `export const nImages = ${Math.floor(jsonData.meta.size.w / 16)};\n`
 
     await promisify(fs.writeFile)(outputFileName, outputFile, 'utf8');
 })().catch(console.error);

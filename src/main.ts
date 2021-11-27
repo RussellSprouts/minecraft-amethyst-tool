@@ -19,6 +19,36 @@ fileSelector.addEventListener('change', async () => {
   main(schematic);
 });
 
+const previewSelector = document.getElementById('preview') as HTMLInputElement;
+previewSelector.addEventListener('change', async () => {
+  const fileList = previewSelector.files;
+  if (!fileList || fileList.length > 1) {
+    throw new Error('One file at a time');
+  } else if (fileList.length === 0) {
+    console.log('File unselected');
+    return; // do nothing
+  }
+
+  console.log(fileList);
+
+  const fileContents = await readFile(fileList[0]);
+  const schematic = new SchematicReader(fileContents);
+  const renderer = new Renderer('#c');
+
+  console.log(schematic, renderer);
+  for (let y = 0; y < schematic.height; y++) {
+    for (let z = 0; z < schematic.length; z++) {
+      for (let x = 0; x < schematic.width; x++) {
+        const block = schematic.getBlock(x, y, z);
+        if (block.includes('sticky_piston')) {
+          console.log(block);
+        }
+        renderer.setBlockState(x, y, z, block);
+      }
+    }
+  }
+});
+
 const sampleButton = document.getElementById('sample') as HTMLButtonElement;
 sampleButton.addEventListener('click', () => {
   const fileContents = new Uint8Array([
