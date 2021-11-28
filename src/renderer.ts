@@ -405,6 +405,13 @@ const TEXTURES: Record<string, THREE.Material | THREE.Material[] | undefined> = 
   'minecraft:amethyst_block': singleColorMaterial('#7457a5'),
   'minecraft:stone_button': singleColorMaterial('#888'),
   'minecraft:hopper': singleColorMaterial('#333'),
+  'minecraft:stone': singleColorMaterial('#777'),
+  'minecraft:dirt': singleColorMaterial('#61452e'),
+  'minecraft:diorite': singleColorMaterial('#aaa'),
+  'minecraft:andesite': singleColorMaterial('#777'),
+  'minecraft:granite': singleColorMaterial('#7f5646'),
+  'minecraft:deepslate': singleColorMaterial('#333'),
+  'minecraft:gravel': singleColorMaterial('#888'),
   'minecraft:repeater': DEFAULT_TRANSPARENT,
   'minecraft:comparator': DEFAULT_TRANSPARENT,
   'minecraft:small_amethyst_bud': DEFAULT_TRANSPARENT,
@@ -560,11 +567,6 @@ function generateRotations(block: string): Record<string, THREE.Euler> {
   };
 }
 
-Object.fromEntries([
-  ['a', 'A'],
-  ['b', 'B'],
-]) // => {a: 'A', b: 'B'}
-
 const ROTATIONS: Record<string, THREE.Euler> = {
   'default': DEFAULT_ROTATION,
   ...generateRotations('minecraft:observer'),
@@ -572,10 +574,14 @@ const ROTATIONS: Record<string, THREE.Euler> = {
   ...generateRotations('minecraft:sticky_piston[extended=true]'),
   ...generateRotations('minecraft:piston[extended=false]'),
   ...generateRotations('minecraft:piston[extended=true]'),
-  ...generateRotations('minecraft:small_amethyst_bud'),
-  ...generateRotations('minecraft:medium_amethyst_bud'),
-  ...generateRotations('minecraft:large_amethyst_bud'),
-  ...generateRotations('minecraft:amethyst_cluster'),
+  ...generateRotations('minecraft:small_amethyst_bud[waterlogged=true]'),
+  ...generateRotations('minecraft:small_amethyst_bud[waterlogged=false]'),
+  ...generateRotations('minecraft:medium_amethyst_bud[waterlogged=true]'),
+  ...generateRotations('minecraft:medium_amethyst_bud[waterlogged=false]'),
+  ...generateRotations('minecraft:large_amethyst_bud[waterlogged=true]'),
+  ...generateRotations('minecraft:large_amethyst_bud[waterlogged=false]'),
+  ...generateRotations('minecraft:amethyst_cluster[waterlogged=true]'),
+  ...generateRotations('minecraft:amethyst_cluster[waterlogged=false]'),
 
   ...Object.fromEntries(
     [1, 2, 3, 4].flatMap(delay =>

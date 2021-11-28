@@ -462,6 +462,70 @@
     "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
     "sourceSize": { "w": 16, "h": 16 },
     "duration": 100
+   },
+   "58": {
+    "frame": { "x": 928, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "59": {
+    "frame": { "x": 944, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "60": {
+    "frame": { "x": 960, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "61": {
+    "frame": { "x": 976, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "62": {
+    "frame": { "x": 992, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "63": {
+    "frame": { "x": 1008, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "64": {
+    "frame": { "x": 1024, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
+   },
+   "65": {
+    "frame": { "x": 1040, "y": 0, "w": 16, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 },
+    "sourceSize": { "w": 16, "h": 16 },
+    "duration": 100
    }
  },
  "meta": {
@@ -469,7 +533,7 @@
   "version": "1.2.30-x64",
   "image": "all.png",
   "format": "RGBA8888",
-  "size": { "w": 928, "h": 16 },
+  "size": { "w": 1056, "h": 16 },
   "scale": "1",
   "frameTags": [
    { "name": "sticky_piston_face", "from": 0, "to": 0, "direction": "forward" },
@@ -517,7 +581,15 @@
    { "name": "redstone_nsw", "from": 50, "to": 51, "direction": "forward" },
    { "name": "redstone_new", "from": 52, "to": 53, "direction": "forward" },
    { "name": "redstone_nse", "from": 54, "to": 55, "direction": "forward" },
-   { "name": "redstone_sew", "from": 56, "to": 57, "direction": "forward" }
+   { "name": "redstone_sew", "from": 56, "to": 57, "direction": "forward" },
+   { "name": "coal_ore", "from": 58, "to": 58, "direction": "forward" },
+   { "name": "copper_ore", "from": 59, "to": 59, "direction": "forward" },
+   { "name": "lapis_ore", "from": 60, "to": 60, "direction": "forward" },
+   { "name": "iron_ore", "from": 61, "to": 61, "direction": "forward" },
+   { "name": "redstone_ore", "from": 62, "to": 62, "direction": "forward" },
+   { "name": "diamond_ore", "from": 63, "to": 63, "direction": "forward" },
+   { "name": "gold_ore", "from": 64, "to": 64, "direction": "forward" },
+   { "name": "emerald_ore", "from": 65, "to": 65, "direction": "forward" }
   ],
   "layers": [
    { "name": "Layer 1", "opacity": 255, "blendMode": "normal" }
