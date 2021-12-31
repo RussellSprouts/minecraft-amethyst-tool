@@ -295,7 +295,7 @@ class DataViewReader {
  * For example, byte and short are both numbers when read,
  * but must be written differently.
  */
-export class Nbt<S extends { [key: string]: NbtShape }> {
+export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
   constructor(private shape: S) { }
 
   /**
