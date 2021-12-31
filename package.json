@@ -5,8 +5,8 @@
   "main": "main.js",
   "scripts": {
     "build": "tscc",
-    "watch": "nodemon -e ts -x npm run build",
-    "textures": "node textures/generate.js textures/index.ts textures/textures.json textures/all.png"
+    "watch": "nodemon -e ts -x npm run build & nodemon -e aseprite -x npm run textures",
+    "textures": "node textures/generate.js textures/index.ts textures/textures.json textures/all.png textures/textures.aseprite"
   },
   "author": "",
   "license": "ISC",
@@ -15,6 +15,7 @@
     "@tscc/tscc": "^0.7.4",
     "@types/pako": "^1.0.2",
     "@types/three": "^0.132.2",
+    "aseprite-cli": "^1.1.2",
     "nodemon": "^2.0.13",
     "typescript": "^4.4.3"
   }

@@ -3,14 +3,31 @@ const fs = require('fs');
 const path = require('path');
 const { promisify } = require('util');
 const { ImagePool } = require('@squoosh/lib');
+const Aseprite = require('aseprite-cli')
+    .instance(`${process.env.HOME}/.local/share/Steam/steamapps/common/Aseprite/aseprite`);
 
-const [, , outputFileName, jsonFile, pngFile] = process.argv;
+const [, , outputFileName, jsonFile, pngFile, asepriteFile] = process.argv;
 
 console.log('OUTPUT FILE', outputFileName);
 console.log('JSON FILE', jsonFile);
 console.log('PNG FILE', pngFile);
 
 (async () => {
+    try {
+        console.log('Trying to export sprite sheet...');
+        await Aseprite.exec(asepriteFile, {
+            sheet: pngFile,
+            sheetType: 'vertical',
+            data: jsonFile,
+            format: 'json-hash',
+            filenameFormat: '{frame}',
+            listTags: '',
+        });
+    } catch (e) {
+        console.log('Sprite sheet failed -- assuming data has been exported already.');
+        console.error(e);
+    }
+
     const imagePool = new ImagePool(8);
     const contents = await promisify(fs.readFile)(pngFile);
     const image = imagePool.ingestImage(contents);
@@ -36,10 +53,10 @@ console.log('PNG FILE', pngFile);
     for (const tag of jsonData.meta.frameTags) {
         const { name, from } = tag;
         const frameData = jsonData.frames[from];
-        outputFile += `export const ${name} = ${Math.floor(frameData.frame.x / 16)};\n`;
+        outputFile += `export const ${name} = ${Math.floor(frameData.frame.y / 16)};\n`;
     }
 
-    outputFile += `export const nImages = ${Math.floor(jsonData.meta.size.w / 16)};\n`
+    outputFile += `export const nImages = ${Math.floor(jsonData.meta.size.h / 16)};\n`
 
     await promisify(fs.writeFile)(outputFileName, outputFile, 'utf8');
 })().catch(console.error);

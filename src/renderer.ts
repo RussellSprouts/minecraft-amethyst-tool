@@ -133,10 +133,10 @@ function texturedCube(
     const faceIndex = Math.floor(i / 8);
     const face = faces[faceIndex];
     const [textureWidth, textureHeight] = sizes[faceIndex];
-    const uvStartX = face / textures.nImages;
-    const uvStartY = 1 - textureHeight / 16;
-    const uvEndX = (face + textureWidth / 16) / textures.nImages;
-    const uvEndY = 1;
+    const uvStartX = 0;
+    const uvEndX = textureWidth / 16;
+    const uvStartY = (textures.nImages - face - textureHeight / 16) / textures.nImages;
+    const uvEndY = (textures.nImages - face) / textures.nImages;
     newUvs[i] = newUvs[i] ? uvEndX : uvStartX; // x
     newUvs[i + 1] = newUvs[i + 1] ? uvEndY : uvStartY; // y
   }
