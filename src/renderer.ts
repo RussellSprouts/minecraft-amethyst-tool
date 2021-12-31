@@ -355,6 +355,97 @@ function amethystShardGeometry(texture: number) {
   ]).rotateY(Math.PI / 4);
 }
 
+function pistonGeometry(sticky: boolean, extended: boolean): THREE.BufferGeometry {
+  if (extended) {
+    return texturedCube(
+      textures.piston_side_short,
+      textures.piston_side_short,
+      textures.piston_side_short,
+      textures.piston_side_short,
+      textures.piston_face_extended,
+      textures.piston_back,
+      16, 12, 16
+    );
+  } else {
+    const side = sticky ? textures.sticky_piston_side : textures.piston_side;
+    return texturedCube(
+      side,
+      side,
+      side,
+      side,
+      sticky ? textures.sticky_piston_face : textures.piston_face,
+      textures.piston_back,
+    );
+  }
+}
+
+function pistonHeadGeometry(type: 'sticky' | 'normal') {
+  const head_side = type === 'sticky' ?
+    textures.sticky_piston_head_side : textures.piston_head_side;
+  const head_face = type === 'sticky' ?
+    textures.sticky_piston_face : textures.piston_face;
+  return THREE.BufferGeometryUtils.mergeBufferGeometries([
+    texturedCube(
+      head_side,
+      head_side,
+      head_side,
+      head_side,
+      head_face,
+      head_face,
+      16, 4, 16, 0, 12, 0
+    ),
+    texturedCube(
+      textures.piston_arm,
+      textures.piston_arm,
+      textures.piston_arm,
+      textures.piston_arm,
+      textures.empty,
+      textures.empty,
+      4, 16, 4,
+      6, -4, 6
+    )
+  ]);
+}
+
+function chestGeometry(type: 'left' | 'right' | 'single') {
+  if (type === 'single') {
+    return THREE.BufferGeometryUtils.mergeBufferGeometries([
+      texturedCube(
+        textures.chest_side,
+        textures.chest_side,
+        textures.chest_front,
+        textures.chest_side,
+        textures.chest_top,
+        textures.chest_top,
+        14, 14, 14,
+        1, 0, 1
+      )
+    ]);
+  } else if (type === 'left') {
+    return texturedCube(
+      textures.chest_right_back,
+      textures.empty,
+      textures.chest_left,
+      textures.chest_side,
+      textures.chest_left_top,
+      textures.chest_left_top,
+      15, 14, 14,
+      1, 0, 1
+    );
+  } else if (type === 'right') {
+    return texturedCube(
+      textures.chest_left_back,
+      textures.chest_side,
+      textures.chest_right,
+      textures.empty,
+      textures.chest_right_top,
+      textures.chest_right_top,
+      15, 14, 14,
+      0, 0, 1
+    );
+  }
+}
+
 const REDSTONE_BOTTOM_TEXTURE: Record<string, number> = {
   '': textures.redstone_dot,
   'n': textures.redstone_ns,
@@ -390,7 +481,7 @@ function redstoneWireGeometry(north: RedstoneSide, south: RedstoneSide, east: Re
     + (west === 'none' ? '' : 'w')
     ] + poweredOffset,
     16, 16, 16, 0, 0, 0,
-    0.1 // offset a tiny bit to prevent texture fighting
+    0.01 // offset a tiny bit to prevent texture fighting
   )
 }
 
@@ -412,12 +503,14 @@ const TEXTURES: Record<string, THREE.Material | THREE.Material[] | undefined> = 
   'minecraft:granite': singleColorMaterial('#7f5646'),
   'minecraft:deepslate': singleColorMaterial('#333'),
   'minecraft:gravel': singleColorMaterial('#888'),
+  'minecraft:iron_block': singleColorMaterial('#aaa'),
   'minecraft:repeater': DEFAULT_TRANSPARENT,
   'minecraft:comparator': DEFAULT_TRANSPARENT,
   'minecraft:small_amethyst_bud': DEFAULT_TRANSPARENT,
   'minecraft:medium_amethyst_bud': DEFAULT_TRANSPARENT,
   'minecraft:large_amethyst_bud': DEFAULT_TRANSPARENT,
   'minecraft:amethyst_cluster': DEFAULT_TRANSPARENT,
+  'minecraft:water': singleColorMaterial('#00f', 0.1),
   'default': new THREE.MeshStandardMaterial({ map: spriteSheet }),
 };
 
@@ -426,22 +519,22 @@ const MODELS: Record<string, THREE.BufferGeometry> = {
   'minecraft:stone_button':
     new THREE.BoxGeometry(6 / 16, 2 / 16, 4 / 16)
       .translate(0, -7 / 16, 0),
-  'minecraft:sticky_piston': texturedCube(
-    textures.sticky_piston_side,
-    textures.sticky_piston_side,
-    textures.sticky_piston_side,
-    textures.sticky_piston_side,
-    textures.sticky_piston_face,
-    textures.piston_back,
-  ),
-  'minecraft:piston': texturedCube(
-    textures.piston_side,
-    textures.piston_side,
-    textures.piston_side,
-    textures.piston_side,
-    textures.piston_face,
-    textures.piston_back,
-  ),
+  ...Object.fromEntries(
+    ['north', 'south', 'east', 'west', 'up', 'down'].flatMap(facing =>
+      ['sticky_', ''].flatMap(sticky =>
+        [true, false].map(extended =>
+          [
+            `minecraft:${sticky}piston[extended=${extended},facing=${facing}]`,
+            pistonGeometry(!!sticky, extended)
+          ])))),
+  ...Object.fromEntries(
+    ['north', 'south', 'east', 'west', 'up', 'down'].flatMap(facing =>
+      (['sticky', 'normal'] as const).flatMap(type =>
+        [true, false].map(short =>
+          [
+            `minecraft:piston_head[facing=${facing},short=${short},type=${type}]`,
+            pistonHeadGeometry(type)
+          ])))),
   'minecraft:observer': texturedCube(
     textures.observer_arrow,
     textures.observer_side,
@@ -481,13 +574,12 @@ const MODELS: Record<string, THREE.BufferGeometry> = {
     ([1, 2, 3, 4] as const).flatMap(delay =>
       [true, false].flatMap(powered => {
         const geometry = repeaterGeometry(delay, powered);
-        return ['east', 'west', 'north', 'south'].map(facing =>
-          [
-            `minecraft:repeater[delay=${delay},facing=${facing},powered=${powered}]`,
+        return ['east', 'west', 'north', 'south'].flatMap(facing =>
+          [true, false].map(locked => [
+            `minecraft:repeater[delay=${delay},facing=${facing},locked=${locked},powered=${powered}]`,
             geometry
-          ]);
-      }
-      ))),
+          ]));
+      }))),
   ...Object.fromEntries(
     [true, false].flatMap(powered =>
       (['compare', 'subtract'] as const).flatMap(mode => {
@@ -499,6 +591,15 @@ const MODELS: Record<string, THREE.BufferGeometry> = {
           ]);
       }
       ))),
+  ...Object.fromEntries(
+    ['east', 'west', 'north', 'south'].flatMap(facing =>
+      (['left', 'right', 'single'] as const).flatMap(type =>
+        [true, false].map(waterlogged =>
+          [
+            `minecraft:chest[facing=${facing},type=${type},waterlogged=${waterlogged}]`,
+            chestGeometry(type),
+          ]
+        )))),
   'minecraft:note_block': singleTexturedCube(textures.note_block),
   'minecraft:redstone_lamp': singleTexturedCube(textures.redstone_lamp_off),
   'minecraft:redstone_lamp[lit=true]': singleTexturedCube(textures.redstone_lamp_lit),
@@ -507,11 +608,29 @@ const MODELS: Record<string, THREE.BufferGeometry> = {
   'minecraft:obsidian': singleTexturedCube(textures.obsidian),
   'minecraft:budding_amethyst': singleTexturedCube(textures.budding_amethyst),
   'minecraft:hopper': hopperGeometry(true),
-  'minecraft:hopper[facing=down]': hopperGeometry(false),
+  'minecraft:hopper[enabled=true,facing=down]': hopperGeometry(false),
+  'minecraft:hopper[enabled=false,facing=down]': hopperGeometry(false),
   'minecraft:small_amethyst_bud': amethystShardGeometry(textures.shard_1),
   'minecraft:medium_amethyst_bud': amethystShardGeometry(textures.shard_2),
   'minecraft:large_amethyst_bud': amethystShardGeometry(textures.shard_3),
   'minecraft:amethyst_cluster': amethystShardGeometry(textures.shard_4),
+  'minecraft:coal_ore': singleTexturedCube(textures.coal_ore),
+  'minecraft:copper_ore': singleTexturedCube(textures.copper_ore),
+  'minecraft:lapis_ore': singleTexturedCube(textures.lapis_ore),
+  'minecraft:iron_ore': singleTexturedCube(textures.iron_ore),
+  'minecraft:redstone_ore': singleTexturedCube(textures.redstone_ore),
+  'minecraft:diamond_ore': singleTexturedCube(textures.diamond_ore),
+  'minecraft:gold_ore': singleTexturedCube(textures.gold_ore),
+  'minecraft:emerald_ore': singleTexturedCube(textures.emerald_ore),
+  'minecraft:deepslate_coal_ore': singleTexturedCube(textures.coal_ore + 1),
+  'minecraft:deepslate_copper_ore': singleTexturedCube(textures.copper_ore + 1),
+  'minecraft:deepslate_lapis_ore': singleTexturedCube(textures.lapis_ore + 1),
+  'minecraft:deepslate_iron_ore': singleTexturedCube(textures.iron_ore + 1),
+  'minecraft:deepslate_redstone_ore': singleTexturedCube(textures.redstone_ore + 1),
+  'minecraft:deepslate_diamond_ore': singleTexturedCube(textures.diamond_ore + 1),
+  'minecraft:deepslate_gold_ore': singleTexturedCube(textures.gold_ore + 1),
+  'minecraft:deepslate_emerald_ore': singleTexturedCube(textures.emerald_ore + 1),
+  'minecraft:smooth_stone': singleTexturedCube(textures.smooth_stone),
 };
 
 const DEFAULT_ROTATION = new THREE.Euler(0, 0, 0);
@@ -569,9 +688,14 @@ function generateRotations(block: string): Record<string, THREE.Euler> {
 
 const ROTATIONS: Record<string, THREE.Euler> = {
   'default': DEFAULT_ROTATION,
-  ...generateRotations('minecraft:observer'),
+  ...generateRotations('minecraft:observer[powered=false]'),
+  ...generateRotations('minecraft:observer[powered=true]'),
   ...generateRotations('minecraft:sticky_piston[extended=false]'),
   ...generateRotations('minecraft:sticky_piston[extended=true]'),
+  ...generateRotations('minecraft:piston_head[short=true,type=sticky]'),
+  ...generateRotations('minecraft:piston_head[short=false,type=sticky]'),
+  ...generateRotations('minecraft:piston_head[short=true,type=normal]'),
+  ...generateRotations('minecraft:piston_head[short=false,type=normal]'),
   ...generateRotations('minecraft:piston[extended=false]'),
   ...generateRotations('minecraft:piston[extended=true]'),
   ...generateRotations('minecraft:small_amethyst_bud[waterlogged=true]'),
@@ -585,16 +709,26 @@ const ROTATIONS: Record<string, THREE.Euler> = {
 
   ...Object.fromEntries(
     [1, 2, 3, 4].flatMap(delay =>
-      [true, false].map(powered =>
-        Object.entries(
-          generateSpins(`minecraft:repeater[delay=${delay},powered=${powered}]`))))),
+      [true, false].flatMap(locked =>
+        [true, false].flatMap(powered =>
+          Object.entries(
+            generateSpins(`minecraft:repeater[delay=${delay},locked=${locked},powered=${powered}]`)))))),
+
+  ...generateSpins('minecraft:chest[type=right,waterlogged=false]'),
+  ...generateSpins('minecraft:chest[type=right,waterlogged=true]'),
+  ...generateSpins('minecraft:chest[type=left,waterlogged=false]'),
+  ...generateSpins('minecraft:chest[type=left,waterlogged=true]'),
+  ...generateSpins('minecraft:chest[type=single,waterlogged=false]'),
+  ...generateSpins('minecraft:chest[type=single,waterlogged=true]'),
+
 
   ...generateSpins('minecraft:comparator[mode=compare,powered=false]'),
   ...generateSpins('minecraft:comparator[mode=compare,powered=true]'),
   ...generateSpins('minecraft:comparator[mode=subtract,powered=false]'),
   ...generateSpins('minecraft:comparator[mode=subtract,powered=true]'),
 
-  ...generateSpins('minecraft:hopper'),
+  ...generateSpins('minecraft:hopper[enabled=true]'),
+  ...generateSpins('minecraft:hopper[enabled=false]'),
 
   // buttons don't use the usual rotations, because they
   // have 4 separate rotations for floors and ceilings.
@@ -688,7 +822,7 @@ export class Renderer {
       this.allBlockStates[point] = blockState;
       this.allBlocks[point] && this.scene.remove(this.allBlocks[point]!);
       this.allBlocks[point] = undefined;
-      if (blockState !== 'minecraft:air') {
+      if (blockState !== 'minecraft:air' && blockState !== 'minecraft:cave_air') {
         const newMesh = new THREE.Mesh(getPropertyForBlock(MODELS, blockState), getPropertyForBlock(TEXTURES, blockState));
         newMesh.position.set(x, y, z);
         newMesh.setRotationFromEuler(getPropertyForBlock(ROTATIONS, blockState));
