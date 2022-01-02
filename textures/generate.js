@@ -3,8 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const { promisify } = require('util');
 const { ImagePool } = require('@squoosh/lib');
-const Aseprite = require('aseprite-cli')
-    .instance(`${process.env.HOME}/.local/share/Steam/steamapps/common/Aseprite/aseprite`);
+const Aseprite = require('aseprite-cli').instance([
+    `${process.env.HOME}/.local/share/Steam/steamapps/common/Aseprite/aseprite`,
+    `C:\\PROGRA~2\\Steam\\steamapps\\common\\Aseprite\\Aseprite.exe`]);
 
 const [, , outputFileName, jsonFile, pngFile, asepriteFile] = process.argv;
 
