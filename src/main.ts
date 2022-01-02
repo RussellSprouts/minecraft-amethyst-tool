@@ -2,6 +2,7 @@ import { SchematicReader, Point, IntRange, p, parseP, parseBlockState, } from ".
 import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 import { expected_shards_per_hour_per_face } from './optimization';
+import { AnvilParser } from './anvil';
 
 const fileSelector = document.getElementById('litematic') as HTMLInputElement;
 fileSelector.addEventListener('change', async () => {
@@ -17,6 +18,33 @@ fileSelector.addEventListener('change', async () => {
   const fileContents = await readFile(fileList[0]);
   const schematic = new SchematicReader(fileContents);
   main(schematic);
+});
+
+const regionSelector = document.getElementById('region') as HTMLInputElement;
+regionSelector.addEventListener('change', async () => {
+  const fileList = regionSelector.files;
+  if (!fileList || fileList.length > 1) {
+    throw new Error('One file at a time');
+  } else if (fileList.length === 0) {
+    console.log('No files, doing nothing.');
+    return; // do nothing
+  }
+
+  console.log(fileList);
+
+  const fileContents = await readFile(fileList[0]);
+  const parser = new AnvilParser(new DataView(fileContents.buffer));
+
+  const allBlocks = new Set<string>();
+  for (let x = 0; x < 32; x++) {
+    for (let z = 0; z < 32; z++) {
+      parser.parseChunk(x, z, allBlocks);
+    }
+  }
+  console.log('done.', allBlocks);
+  if (allBlocks.has('minecraft:budding_amethyst')) {
+    console.log('Has budding amethyst!');
+  }
 });
 
 const previewSelector = document.getElementById('preview') as HTMLInputElement;
@@ -35,14 +63,16 @@ previewSelector.addEventListener('change', async () => {
   const schematic = new SchematicReader(fileContents);
   const renderer = new Renderer('#c');
 
+  const blockReadout = document.getElementById('block-readout')!;
+  renderer.addEventListener('hover', (e) => {
+    blockReadout.textContent = (e as CustomEvent).detail.blockState;
+  });
+
   console.log(schematic, renderer);
   for (let y = 0; y < schematic.height; y++) {
     for (let z = 0; z < schematic.length; z++) {
       for (let x = 0; x < schematic.width; x++) {
         const block = schematic.getBlock(x, y, z);
-        if (block.includes('sticky_piston')) {
-          console.log(block);
-        }
         renderer.setBlockState(x, y, z, block);
       }
     }
@@ -89,6 +119,11 @@ sampleButton.addEventListener('click', () => {
 
 function main(schematic: SchematicReader) {
   const renderer = new Renderer('#c');
+
+  const blockReadout = document.getElementById('block-readout')!;
+  renderer.addEventListener('hover', (e) => {
+    blockReadout.textContent = (e as CustomEvent).detail.blockState;
+  });
 
   const x_coords: Record<Point, boolean> = {};
   const y_coords: Record<Point, boolean> = {};
@@ -149,7 +184,6 @@ function main(schematic: SchematicReader) {
   const center_y = (min_bud_y + max_bud_y) / 2;
   const center_z = (min_bud_z + max_bud_z) / 2;
   renderer.controls.target.set(center_x, center_y, center_z);
-  renderer.pointLight.position.set(center_x, center_y, center_z);
   console.log('EXTENTS:', 'x:', min_bud_x, max_bud_x, 'y:', min_bud_y, max_bud_y, 'z:', min_bud_z, max_bud_z);
 
   console.log(x_coords, y_coords, z_coords);
@@ -342,12 +376,12 @@ function main(schematic: SchematicReader) {
   // ] as const;
 
   const button_by_face = [
-    'minecraft:amethyst_cluster[facing=west]', // [+1, 0, 0]
-    'minecraft:amethyst_cluster[facing=east]', // [-1, 0, 0]
-    'minecraft:amethyst_cluster[facing=down]', // [0, +1, 0]
-    'minecraft:amethyst_cluster[facing=up]',   // [0, -1, 0]
-    'minecraft:amethyst_cluster[facing=north]',// [0, 0, +1]
-    'minecraft:amethyst_cluster[facing=south]',// [0, 0, -1]
+    'minecraft:amethyst_cluster[facing=west,waterlogged=false]', // [+1, 0, 0]
+    'minecraft:amethyst_cluster[facing=east,waterlogged=false]', // [-1, 0, 0]
+    'minecraft:amethyst_cluster[facing=down,waterlogged=false]', // [0, +1, 0]
+    'minecraft:amethyst_cluster[facing=up,waterlogged=false]',   // [0, -1, 0]
+    'minecraft:amethyst_cluster[facing=north,waterlogged=false]',// [0, 0, +1]
+    'minecraft:amethyst_cluster[facing=south,waterlogged=false]',// [0, 0, -1]
   ] as const;
 
   for (const unreachable_block of Object.keys(unreachable_faces) as Array<Point>) {
@@ -611,8 +645,8 @@ function main(schematic: SchematicReader) {
     }
   }
 
-  renderer.setBlockState(fx + 2, fy + 2, fz - 0, 'minecraft:sticky_piston[facing=up]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 1, 'minecraft:piston[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 0, 'minecraft:sticky_piston[extended=false,facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 1, 'minecraft:piston[extended=false,facing=up]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 2, 'minecraft:observer[facing=up]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 3, 'minecraft:redstone_lamp[facing=up]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 4, 'minecraft:redstone_lamp[lit=true]');
@@ -620,11 +654,11 @@ function main(schematic: SchematicReader) {
   renderer.setBlockState(fx + 2, fy + 2, fz - 6, 'minecraft:redstone_block');
   renderer.setBlockState(fx + 2, fy + 2, fz - 7, 'minecraft:scaffolding');
   renderer.setBlockState(fx + 2, fy + 2, fz - 8, 'minecraft:scaffolding[bottom=true]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 9, 'minecraft:repeater[delay=1,facing=east,powered=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 9, 'minecraft:repeater[delay=1,facing=east,locked=false,powered=true]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 10, 'minecraft:comparator[facing=north,mode=compare,powered=true]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 11, 'minecraft:comparator[facing=north,mode=subtract,powered=false]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 12, 'minecraft:hopper[facing=north]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 13, 'minecraft:hopper[facing=down]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 12, 'minecraft:hopper[enabled=true,facing=north]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 13, 'minecraft:hopper[enabled=true,facing=down]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 14, 'minecraft:small_amethyst_bud[facing=up]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 15, 'minecraft:medium_amethyst_bud[facing=up]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 16, 'minecraft:large_amethyst_bud[facing=up]');

@@ -756,7 +756,7 @@ function getPropertyForBlock<T>(propertyMap: Record<string, T>, block: string): 
   return propertyMap['default'];
 }
 
-export class Renderer {
+export class Renderer extends EventTarget {
   allBlockStates: Record<Point, string | undefined> = {};
   allBlocks: Record<Point, THREE.Mesh | undefined> = {};
 
@@ -765,13 +765,17 @@ export class Renderer {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
-  directionalLight: THREE.DirectionalLight;
+  directionalLightY: THREE.DirectionalLight;
+  directionalLightPlusX: THREE.DirectionalLight;
+  directionalLightMinusX: THREE.DirectionalLight;
+  directionalLightPlusZ: THREE.DirectionalLight;
+  directionalLightMinusZ: THREE.DirectionalLight;
   ambientLight: THREE.AmbientLight;
-  pointLight: THREE.PointLight;
   raycaster: THREE.Raycaster;
   mouse: THREE.Vector2;
 
   constructor(cssQuery: string) {
+    super();
     const canvas = document.querySelector(cssQuery) as HTMLCanvasElement;
     this.renderer = new THREE.WebGLRenderer({ canvas });
     this.mouse = new THREE.Vector2();
@@ -786,15 +790,29 @@ export class Renderer {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('lightblue');
 
-    this.directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
-    this.directionalLight.position.set(-1, 2, 4);
-    scene.add(this.directionalLight);
+    this.directionalLightY = new THREE.DirectionalLight(0x777777);
+    this.directionalLightY.position.set(0, 1, 0);
+    scene.add(this.directionalLightY);
+
+    this.directionalLightPlusX = new THREE.DirectionalLight(0x444444);
+    this.directionalLightPlusX.position.set(1, 0, 0);
+    scene.add(this.directionalLightPlusX);
+
+    this.directionalLightMinusX = new THREE.DirectionalLight(0x444444);
+    this.directionalLightMinusX.position.set(-1, 0, 0);
+    scene.add(this.directionalLightMinusX);
+
+    this.directionalLightPlusZ = new THREE.DirectionalLight(0x222222);
+    this.directionalLightPlusZ.position.set(0, 0, 1);
+    scene.add(this.directionalLightPlusZ);
+
+    this.directionalLightMinusZ = new THREE.DirectionalLight(0x222222);
+    this.directionalLightMinusZ.position.set(0, 0, -1);
+    scene.add(this.directionalLightMinusZ);
 
     this.ambientLight = new THREE.AmbientLight(0x888888);
     scene.add(this.ambientLight);
 
-    this.pointLight = new THREE.PointLight('#ffb900', 0.2, 0, 2);
-    scene.add(this.pointLight);
     this.scene = scene;
 
     const fov = 75;
@@ -866,7 +884,13 @@ export class Renderer {
     }
     const intersects = this.raycaster.intersectObjects(this.scene.children);
     for (const object of intersects) {
-      //object.object.visible = false;
+      const x = object.object.position.x | 0;
+      const y = object.object.position.y | 0;
+      const z = object.object.position.z | 0;
+      this.dispatchEvent(new CustomEvent('hover', {
+        detail: { x, y, z, blockState: this.getBlockState(x, y, z) }
+      }));
+      break;
     }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
