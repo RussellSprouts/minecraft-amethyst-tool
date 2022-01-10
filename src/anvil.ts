@@ -1,9 +1,16 @@
 import * as pako from 'pako';
-import { Nbt } from './nbt';
+import { blockState } from './litematic';
+import { Nbt, ShapeToInterface } from './nbt';
+import { Renderer } from './renderer';
+import { Virtual3DCanvas } from './virtual_canvas';
 
-enum DataVersions {
-  RELEASE_1_18 = 2860,
-  SNAPSHOT_20w17a = 2529
+const enum DataVersions {
+  // First snapshot that leaves extra bits at the end of blockState arrays
+  SNAPSHOT_20w17a = 2529,
+  // First snapshot that uses new format for sections in chunk
+  SNAPSHOT_21w37a = 2834,
+  // First snapshot that uses new format for top-level info
+  SNAPSHOT_21w43a = 2844,
 }
 
 const SECTOR_SIZE = 4096;
@@ -53,7 +60,7 @@ export class AnvilParser {
     return (this.input.getUint32(index) >> 8) * SECTOR_SIZE;
   }
 
-  parseChunk(x: number, z: number, allBlocks: Set<string>) {
+  parseChunk(x: number, z: number, allBlocks: Set<string>, renderer: Renderer) {
     const index = `${x}:${z}`;
     if (this.parsedChunks[index]) {
       return this.parsedChunks[index];
@@ -62,81 +69,123 @@ export class AnvilParser {
     const startIndex = this.chunkOffset(x, z);
     if (startIndex !== -1) {
       const dataLength = this.input.getUint32(startIndex);
-      // console.log('LENGTH', dataLength, startIndex);
       const compressionType = this.input.getUint8(startIndex + 4);
-      // console.log('COMPRESSION', compressionType);
-      // console.log(this);
       const compressedData = new Uint8Array(this.input.buffer, startIndex + 5, dataLength - 1);
-      // console.log('COMPRESSED', compressedData)
       const uncompressed = pako.ungzip(compressedData);
-      // console.log('UNCOMPRESSED', uncompressed);
       const basicNbtParser = new Nbt('*');
-      const CHUNK_FORMAT_SHAPE = {
-        'DataVersion': 'int',
-        /** Level data for 1.18+ */
-        'sections': [{
-          'block_states': {
-            'data': 'longArray',
-            'palette': [{
-              'Name': 'string',
-              'Properties': { '*': 'string' }
-            }],
-            // 'SkyLight': '*',
-            'Y': 'byte',
-            // 'biomes': '*',
-          }
-        }],
-        /** Level data for pre-1.18 */
-        'Level': {
-          'xPos': 'int',
-          'zPos': 'int',
-          'Status': 'string',
-          // 'Biomes': 'intArray',
-          'Sections': [{
-            // 'BlockLight': '*',
-            'BlockStates': 'longArray',
-            'Palette': [{
-              'Name': 'string',
-              'Properties': { '*': 'string' },
-            }],
-            // 'SkyLight': 'byteArray',
-            'Y': 'byte',
-          }],
-          // 'TileEntities': '*',
-          // 'CarvingMasks': '*',
-          // 'Heightmaps': '*',
-          // 'LastUpdate': 'long',
-          // 'Lights': '*',
-          // 'Entities': '*',
-          // 'LiquidsToBeTicked': '*',
-          // 'LiquidTicks': '*',
-          // 'InhabitedTime': 'long',
-          // 'PostProcessing': '*',
-          // 'TileTicks': '*',
-          // 'ToBeTicked': '*',
-          // 'Structures': '*',
-        },
-      } as const;
       const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
 
       console.log('Unshaped-data', basicNbtParser.parse(uncompressed));
       const data = nbtParser.parse(uncompressed);
+      const chunk = new ChunkData(data);
       console.log(data);
-      const version = data['DataVersion'];
-      if (version >= DataVersions.RELEASE_1_18) {
-        // 1.18+
-        for (const section of data?.['sections'] ?? []) {
-          for (const blockState of section?.['block_states']?.['palette'] ?? []) {
-            allBlocks.add(blockState['Name']);
-          }
+
+      for (const section of chunk.sections) {
+        const palette = section.palette;
+        const startY = section.y;
+        for (const state of palette) {
+          allBlocks.add(state['Name']);
         }
-      } else {
-        for (const section of data?.['Level']?.['Sections'] ?? []) {
-          for (const blockState of section['Palette'] || []) {
-            allBlocks.add(blockState['Name']);
+        for (let y = 0; y < 16; y++) {
+          for (let z = 0; z < 16; z++) {
+            for (let x = 0; x < 16; x++) {
+              const state = section.getPaletteIndex(x, y, z);
+              renderer.setBlockState(x, startY * 16 + y, z, blockState(palette[state]));
+            }
           }
         }
       }
     }
+  }
+}
+
+const MINECRAFT_SECTION = {
+  'Y': 'byte',
+
+  // 21w37a+
+  'block_states': {
+    'data': 'longArray',
+    'palette': [{
+      'Name': 'string',
+      'Properties': { '*': 'string' }
+    }],
+  },
+
+  // older versions
+  'BlockStates': 'longArray',
+  'Palette': [{
+    'Name': 'string',
+    'Properties': { '*': 'string' },
+  }],
+} as const;
+
+const CHUNK_FORMAT_SHAPE = {
+  'DataVersion': 'int',
+
+  // 21w43a+
+  'sections': [MINECRAFT_SECTION],
+
+  // older versions
+  'Level': {
+    'xPos': 'int',
+    'zPos': 'int',
+    'Status': 'string',
+    'Sections': [MINECRAFT_SECTION],
+  },
+} as const;
+
+type Section = ShapeToInterface<typeof MINECRAFT_SECTION>;
+
+class ChunkData {
+  constructor(readonly data: ShapeToInterface<typeof CHUNK_FORMAT_SHAPE>) {
+    this.sections = this.data?.['sections']?.map(section => new ChunkSection(this.dataVersion, section as Section)) ??
+      this.data?.['Level']?.['Sections']?.map(section => new ChunkSection(this.dataVersion, section as Section)) ?? [];
+  }
+
+  readonly sections: ChunkSection[];
+
+  get dataVersion() {
+    return this.data['DataVersion'];
+  }
+}
+
+class ChunkSection {
+  constructor(readonly dataVersion: number, private readonly section: Section) { }
+
+  get palette() {
+    return this.section['block_states']?.['palette'] ?? this.section['Palette'] ?? [{ 'Name': 'minecraft:air', 'Properties': {} }];
+  }
+
+  get y() {
+    return this.section['Y'] ?? 0;
+  }
+
+  get blockStates(): DataView | undefined {
+    return this.section['block_states']?.['data'] ?? this.section['BlockStates'];
+  }
+
+  getPaletteIndex(x: number, y: number, z: number) {
+    x = x & 0xF;
+    y = y & 0xF;
+    z = z & 0xF;
+    const blockIndex = x + z * 16 + y * 256;
+    const bitsPerBlock = Math.max(Math.ceil(Math.log2(this.palette.length)), 4);
+    const bitMask = (1n << BigInt(bitsPerBlock)) - 1n;
+    // Before 20w17a, blocks could straddle multiple longs. Afterward, the leftover bits are simply unused.
+    const unusedBitsPerLong = this.dataVersion < DataVersions.SNAPSHOT_20w17a
+      ? 0
+      : 64 % bitsPerBlock;
+    const blocksPerLong = Math.floor(64 / bitsPerBlock);
+    const bitIndex = blockIndex * bitsPerBlock + Math.floor(blockIndex / blocksPerLong) * unusedBitsPerLong;
+    const currentLongIndex = Math.floor(bitIndex / 64) * 8;
+    const blockStates = this.blockStates;
+    if (blockStates) {
+      const currentLong = blockStates.getBigUint64(currentLongIndex);
+      const nextLong = this.dataVersion < DataVersions.SNAPSHOT_20w17a ?
+        (currentLongIndex + 8 < blockStates.byteLength ? blockStates.getBigUint64(currentLongIndex + 8) : 0n)
+        : 0n;
+      return Number((((nextLong << 64n) + currentLong) >> BigInt(bitIndex % 64)) & bitMask);
+    }
+    return 0;
   }
 }

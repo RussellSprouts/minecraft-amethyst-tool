@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { blockState, p, parseBlockState, parseP, Point, SchematicWriter } from './litematic';
+import { blockState, parseBlockState, SchematicWriter } from './litematic';
+import { Point, p, parseP } from './point';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as textures from '../textures/index';
 

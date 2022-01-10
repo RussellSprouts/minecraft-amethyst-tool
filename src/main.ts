@@ -1,4 +1,5 @@
-import { SchematicReader, Point, IntRange, p, parseP, parseBlockState, } from "./litematic";
+import { SchematicReader, IntRange } from "./litematic";
+import { Point, p, parseP } from './point';
 import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 import { expected_shards_per_hour_per_face } from './optimization';
@@ -30,15 +31,22 @@ regionSelector.addEventListener('change', async () => {
     return; // do nothing
   }
 
+  const renderer = new Renderer('#c');
+  const blockReadout = document.getElementById('block-readout')!;
+  renderer.addEventListener('hover', (e) => {
+    blockReadout.textContent = (e as CustomEvent).detail.blockState;
+  });
+
   console.log(fileList);
 
   const fileContents = await readFile(fileList[0]);
   const parser = new AnvilParser(new DataView(fileContents.buffer));
 
   const allBlocks = new Set<string>();
+  parser.parseChunk(0, 0, allBlocks, renderer);
+
   for (let x = 0; x < 32; x++) {
     for (let z = 0; z < 32; z++) {
-      parser.parseChunk(x, z, allBlocks);
     }
   }
   console.log('done.', allBlocks);
