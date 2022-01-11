@@ -43,13 +43,15 @@ regionSelector.addEventListener('change', async () => {
   const parser = new AnvilParser(new DataView(fileContents.buffer));
 
   const allBlocks = new Set<string>();
-  parser.parseChunk(0, 0, allBlocks, renderer);
+  const blockCounts = new Map<string, number>();
 
   for (let x = 0; x < 32; x++) {
     for (let z = 0; z < 32; z++) {
+      console.log("processing", x, z);
+      parser.parseChunk(x, z, allBlocks, renderer, blockCounts);
     }
   }
-  console.log('done.', allBlocks);
+  console.log('done.', allBlocks, blockCounts);
   if (allBlocks.has('minecraft:budding_amethyst')) {
     console.log('Has budding amethyst!');
   }
