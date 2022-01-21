@@ -1,6 +1,7 @@
 import * as pako from 'pako';
 import { blockState } from './litematic';
 import { Nbt, ShapeToInterface } from './nbt';
+import { p, Point } from './point';
 import { Renderer } from './renderer';
 import { Virtual3DCanvas } from './virtual_canvas';
 
@@ -58,6 +59,49 @@ export class AnvilParser {
     }
 
     return (this.input.getUint32(index) >> 8) * SECTOR_SIZE;
+  }
+
+  /**
+   * Counts all of the blocks of the specified type.
+   * Returns a map of chunk coordinate to number of blocks.
+   */
+  countBlocks(state: string): Record<Point, number> {
+    const result: Record<Point, number> = {};
+    for (let x = 0; x < 32; x++) {
+      for (let z = 0; z < 32; z++) {
+        const startIndex = this.chunkOffset(x, z);
+        if (startIndex < 0) { continue; }
+        const dataLength = this.input.getUint32(startIndex);
+        const compressionType = this.input.getUint8(startIndex + 4);
+        const compressedData = new Uint8Array(this.input.buffer, startIndex + 5, dataLength - 1);
+        const uncompressed = pako.ungzip(compressedData);
+        const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
+        const data = nbtParser.parse(uncompressed);
+        const chunk = new ChunkData(data);
+
+        let chunkTotal = 0;
+        for (const section of chunk.sections) {
+          const indexOfTarget = section.palette.findIndex(entry => blockState(entry) === state);
+
+          if (indexOfTarget !== -1) {
+            for (let y = 0; y < 16; y++) {
+              for (let z = 0; z < 16; z++) {
+                for (let x = 0; x < 16; x++) {
+                  const state = section.getPaletteIndex(x, y, z);
+                  if (state === indexOfTarget) {
+                    chunkTotal++;
+                  }
+                }
+              }
+            }
+          }
+        }
+        if (chunkTotal > 0) {
+          result[p(data['xPos'], 0, data['zPos'])] = chunkTotal;
+        }
+      }
+    }
+    return result;
   }
 
   parseChunk(x: number, z: number, allBlocks: Set<string>, renderer: Renderer) {
@@ -121,6 +165,9 @@ const MINECRAFT_SECTION = {
 
 const CHUNK_FORMAT_SHAPE = {
   'DataVersion': 'int',
+  'xPos': 'int',
+  'yPos': 'int',
+  'zPos': 'int',
 
   // 21w43a+
   'sections': [MINECRAFT_SECTION],

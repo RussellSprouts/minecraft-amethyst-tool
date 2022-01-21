@@ -4,6 +4,7 @@ import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 import { expected_shards_per_hour_per_face } from './optimization';
 import { AnvilParser } from './anvil';
+import { LuminanceFormat } from "three";
 
 const fileSelector = document.getElementById('litematic') as HTMLInputElement;
 fileSelector.addEventListener('change', async () => {
@@ -123,6 +124,108 @@ sampleButton.addEventListener('click', () => {
   ]);
   const schematic = new SchematicReader(fileContents);
   main(schematic);
+});
+
+const afkSpot = document.getElementById('afk') as HTMLInputElement;
+const afkLog = document.getElementById('afk-spot-log') as HTMLElement;
+afkSpot.addEventListener('change', async () => {
+  afkLog.textContent = '';
+  const fileList = Array.from(afkSpot.files ?? []);
+  function log(...values: unknown[]) {
+    console.log(...values);
+    const text = values.map(value => value ? (value as {}).toString() : '');
+    afkLog.textContent += text.join('\t') + '\n';
+  }
+
+  log(`Processing ${fileList.length} region files...`);
+
+  // How many budding amethysts we activate from the
+  // center, but just towards the NW (-x, -z) side of the chunk.
+  const chunkAmountsNW: Record<Point, number> = {};
+  const chunkAmountsSW: Record<Point, number> = {};
+  const chunkAmountsNE: Record<Point, number> = {};
+  const chunkAmountsSE: Record<Point, number> = {};
+
+  let bestChunk = p(0, 0, 0);
+  let bestAmount = -1;
+  let bestCoords = '';
+  function recordChunkAmount(chunkAmount: Record<Point, number>, chunk: Point, amount: number, coords: string) {
+    chunkAmount[chunk] = (chunkAmount[chunk] ?? 0) + amount;
+    if (chunkAmount[chunk] > bestAmount) {
+      bestAmount = chunkAmount[chunk];
+      bestChunk = chunk;
+      bestCoords = coords;
+      log(`Best so far: ${bestAmount} budding amethyst blocks, from ${bestCoords} in chunk ${bestChunk}`);
+    }
+  }
+
+  let fileN = 0;
+  for (const file of fileList) {
+    log(`Processing ${file.name} (${Math.floor((fileN / fileList.length) * 100)}% overall)`);
+    fileN++;
+    try {
+      if (file.size === 0) {
+        log('  (Skipping empty region)');
+        continue;
+      }
+      if (!file.name.endsWith('.mca')) {
+        log('  (Skipping unknown file type)');
+      }
+
+      const fileContents = await readFile(file);
+      const parser = new AnvilParser(new DataView(fileContents.buffer));
+      const chunksWithGeodes = parser.countBlocks('minecraft:budding_amethyst');
+      let total = 0;
+      const chunks = Object.keys(chunksWithGeodes) as Point[];
+      for (const chunk of chunks) {
+        total += chunksWithGeodes[chunk];
+      }
+      log(`  found ${total} budding amethyst blocks across ${chunks.length} chunks`);
+      for (const chunk of Object.keys(chunksWithGeodes) as Point[]) {
+        const [chunkX, , chunkZ] = parseP(chunk);
+
+        const chunkCenterX = chunkX + 0.5;
+        const chunkCenterZ = chunkZ + 0.5;
+        for (let xOffset = -8; xOffset <= 8; xOffset++) {
+          for (let zOffset = -8; zOffset <= 8; zOffset++) {
+            const chunkP = p(chunkX + xOffset, 0, chunkZ + zOffset);
+            let dx = chunkCenterX - (chunkX + xOffset + 0.5 - 0.5 / 16);
+            let dz = chunkCenterZ - (chunkZ + zOffset + 0.5 - 0.5 / 16);
+            if (dx * dx + dz * dz < 8 * 8) {
+              recordChunkAmount(chunkAmountsNW, chunkP, chunksWithGeodes[chunk], '7:0:7');
+            }
+
+            dx = chunkCenterX - (chunkX + xOffset + 0.5 - 0.5 / 16);
+            dz = chunkCenterZ - (chunkZ + zOffset + 0.5 + 0.5 / 16);
+            if (dx * dx + dz * dz < 8 * 8) {
+              recordChunkAmount(chunkAmountsSW, chunkP, chunksWithGeodes[chunk], '7:0:8');
+            }
+
+            dx = chunkCenterX - (chunkX + xOffset + 0.5 + 0.5 / 16);
+            dz = chunkCenterZ - (chunkZ + zOffset + 0.5 + 0.5 / 16);
+            if (dx * dx + dz * dz < 8 * 8) {
+              recordChunkAmount(chunkAmountsSE, chunkP, chunksWithGeodes[chunk], '8:0:8');
+            }
+
+            dx = chunkCenterX - (chunkX + xOffset + 0.5 + 0.5 / 16);
+            dz = chunkCenterZ - (chunkZ + zOffset + 0.5 - 0.5 / 16);
+            if (dx * dx + dz * dz < 8 * 8) {
+              recordChunkAmount(chunkAmountsNE, chunkP, chunksWithGeodes[chunk], '8:0:7');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      log(`Error:`, e);
+      console.log(e);
+    }
+  }
+
+  log(`Best overall: ${bestAmount} budding amethyst blocks, from ${bestCoords} in chunk ${bestChunk}`);
+  const [chunkX, , chunkZ] = parseP(bestChunk);
+  const [offsetX, , offsetZ] = parseP(bestCoords as Point);
+  log(`AFK at the coordinates X:${chunkX * 16 + offsetX}, Z: ${chunkZ * 16 + offsetZ} to have ${bestAmount} blocks in range.`);
+  console.log(chunkAmountsNW);
 });
 
 function main(schematic: SchematicReader) {

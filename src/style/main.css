@@ -50,3 +50,7 @@
 .regular.invalid {
     background-color: #800;
 }
+
+#afk-spot-log {
+    max-height: 20em;
+}
