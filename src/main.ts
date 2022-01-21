@@ -155,7 +155,6 @@ afkSpot.addEventListener('change', async () => {
       bestAmount = chunkAmount[chunk];
       bestChunk = chunk;
       bestCoords = coords;
-      log(`Best so far: ${bestAmount} budding amethyst blocks, from ${bestCoords} in chunk ${bestChunk}`);
     }
   }
 
@@ -215,6 +214,7 @@ afkSpot.addEventListener('change', async () => {
           }
         }
       }
+      log(`Best so far: ${bestAmount} budding amethyst blocks, from ${bestCoords} in chunk ${bestChunk}`);
     } catch (e) {
       log(`Error:`, e);
       console.log(e);
