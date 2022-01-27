@@ -12,6 +12,18 @@
     <br><label>or <button id="sample">load a sample</button></label>
     <br><label>or preview a schematic <input id="preview" type="file" accept=".litematic"></label>
     <br><label>or a region file <input id="region" type="file"></label>
+    <br><label>or find best geode afk spot <input id="afk" type="file" multiple></label>
+    <details>
+        <summary>AFK spot finder instructions</summary>
+        <ol>
+            <li>Press the button for "find best afk spot"</li>
+            <li>Navigate to your world's files, and select all files in the "region" folder.</li>
+            <li>Wait as the world is processed. Your files are never uploaded -- processing is in your browser!</li>
+        </ol>
+    </details>
+    <div>
+        <pre><code id="afk-spot-log"></code></pre>
+    </div>
     <div class="x-axis">
         <h2>X Axis - <span class="count"></span> machines</h2>
         <div class="grid"></div>
