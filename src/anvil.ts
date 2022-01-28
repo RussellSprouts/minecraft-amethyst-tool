@@ -81,7 +81,7 @@ export class AnvilParser {
 
         let chunkTotal = 0;
         for (const section of chunk.sections) {
-          const indexOfTarget = section.palette.findIndex(entry => blockState(entry) === state);
+          const indexOfTarget = section.palette.indexOf(state);
 
           if (indexOfTarget !== -1) {
             for (let y = 0; y < 16; y++) {
@@ -97,14 +97,14 @@ export class AnvilParser {
           }
         }
         if (chunkTotal > 0) {
-          result[p(data['xPos'], 0, data['zPos'])] = chunkTotal;
+          result[p(chunk.xPos, 0, chunk.zPos)] = chunkTotal;
         }
       }
     }
     return result;
   }
 
-  parseChunk(x: number, z: number, allBlocks: Set<string>, renderer: Renderer) {
+  parseChunk(x: number, z: number, allBlocks: Set<string>, renderer: Renderer, blockCounts: Map<string, number>) {
     const index = `${x}:${z}`;
     if (this.parsedChunks[index]) {
       return this.parsedChunks[index];
@@ -115,30 +115,39 @@ export class AnvilParser {
       const dataLength = this.input.getUint32(startIndex);
       const compressionType = this.input.getUint8(startIndex + 4);
       const compressedData = new Uint8Array(this.input.buffer, startIndex + 5, dataLength - 1);
+      performance.mark('a')
       const uncompressed = pako.ungzip(compressedData);
       const basicNbtParser = new Nbt('*');
       const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
 
-      console.log('Unshaped-data', basicNbtParser.parse(uncompressed));
+      // console.log('Unshaped-data', basicNbtParser.parse(uncompressed));
+      performance.mark('b');
+      performance.measure('unzip', 'a', 'b');
       const data = nbtParser.parse(uncompressed);
       const chunk = new ChunkData(data);
-      console.log(data);
+      // console.log(data);
 
+      performance.mark('c');
+      performance.measure('nbt-parse', 'b', 'c');
       for (const section of chunk.sections) {
         const palette = section.palette;
         const startY = section.y;
         for (const state of palette) {
-          allBlocks.add(state['Name']);
+          allBlocks.add(state);
         }
         for (let y = 0; y < 16; y++) {
           for (let z = 0; z < 16; z++) {
             for (let x = 0; x < 16; x++) {
-              const state = section.getPaletteIndex(x, y, z);
-              renderer.setBlockState(x, startY * 16 + y, z, blockState(palette[state]));
+              const stateIndex = section.getPaletteIndex(x, y, z);
+              const stateString = palette[stateIndex];
+              blockCounts.set(stateString, (blockCounts.get(stateString) ?? 0) + 1);
+              // renderer.setBlockState(x, startY * 16 + y, z, stateString);
             }
           }
         }
       }
+      performance.mark('d');
+      performance.measure('decode', 'c', 'd');
     }
   }
 }
@@ -165,12 +174,11 @@ const MINECRAFT_SECTION = {
 
 const CHUNK_FORMAT_SHAPE = {
   'DataVersion': 'int',
-  'xPos': 'int',
-  'yPos': 'int',
-  'zPos': 'int',
 
   // 21w43a+
   'sections': [MINECRAFT_SECTION],
+  'xPos': 'int',
+  'zPos': 'int',
 
   // older versions
   'Level': {
@@ -194,44 +202,56 @@ class ChunkData {
   get dataVersion() {
     return this.data['DataVersion'];
   }
+
+  get xPos() {
+    return this.data['xPos'] ?? this.data['Level']?.['xPos'];
+  }
+
+  get zPos() {
+    return this.data['zPos'] ?? this.data['Level']?.['zPos'];
+  }
 }
 
 class ChunkSection {
-  constructor(readonly dataVersion: number, private readonly section: Section) { }
-
-  get palette() {
-    return this.section['block_states']?.['palette'] ?? this.section['Palette'] ?? [{ 'Name': 'minecraft:air', 'Properties': {} }];
+  constructor(readonly dataVersion: number, section: Section) {
+    this.palette = (section['block_states']?.['palette']
+      ?? section['Palette']
+      ?? [{ 'Name': 'minecraft:air', 'Properties': {} }]).map(blockState);
+    this.y = section['Y'] ?? 0;
+    this.blockStates = section['block_states']?.['data'] ?? section['BlockStates'];
+    this.bitsPerBlock = Math.max(Math.ceil(Math.log2(this.palette.length)), 4);
   }
 
-  get y() {
-    return this.section['Y'] ?? 0;
-  }
-
-  get blockStates(): DataView | undefined {
-    return this.section['block_states']?.['data'] ?? this.section['BlockStates'];
-  }
+  palette: string[];
+  y: number;
+  blockStates: DataView | undefined;
+  bitsPerBlock: number;
 
   getPaletteIndex(x: number, y: number, z: number) {
     x = x & 0xF;
     y = y & 0xF;
     z = z & 0xF;
     const blockIndex = x + z * 16 + y * 256;
-    const bitsPerBlock = Math.max(Math.ceil(Math.log2(this.palette.length)), 4);
-    const bitMask = (1n << BigInt(bitsPerBlock)) - 1n;
+    const bitMask = (1 << this.bitsPerBlock) - 1;
     // Before 20w17a, blocks could straddle multiple longs. Afterward, the leftover bits are simply unused.
     const unusedBitsPerLong = this.dataVersion < DataVersions.SNAPSHOT_20w17a
       ? 0
-      : 64 % bitsPerBlock;
-    const blocksPerLong = Math.floor(64 / bitsPerBlock);
-    const bitIndex = blockIndex * bitsPerBlock + Math.floor(blockIndex / blocksPerLong) * unusedBitsPerLong;
+      : 64 % this.bitsPerBlock;
+    const blocksPerLong = Math.floor(64 / this.bitsPerBlock);
+    const bitIndex = blockIndex * this.bitsPerBlock + Math.floor(blockIndex / blocksPerLong) * unusedBitsPerLong;
     const currentLongIndex = Math.floor(bitIndex / 64) * 8;
     const blockStates = this.blockStates;
     if (blockStates) {
-      const currentLong = blockStates.getBigUint64(currentLongIndex);
-      const nextLong = this.dataVersion < DataVersions.SNAPSHOT_20w17a ?
-        (currentLongIndex + 8 < blockStates.byteLength ? blockStates.getBigUint64(currentLongIndex + 8) : 0n)
-        : 0n;
-      return Number((((nextLong << 64n) + currentLong) >> BigInt(bitIndex % 64)) & bitMask);
+      const indexInLong = bitIndex % 64;
+      if (indexInLong < 32) {
+        const currentLongLo = blockStates.getUint32(currentLongIndex + 4);
+        const currentLongHi = blockStates.getUint32(currentLongIndex);
+        return ((currentLongLo >>> indexInLong) | (currentLongHi << (31 - indexInLong) << 1)) & bitMask;
+      } else {
+        const currentLongHi = blockStates.getUint32(currentLongIndex);
+        const nextLongLo = currentLongIndex + 8 < blockStates.byteLength ? blockStates.getUint32(currentLongIndex + 12) : 0;
+        return ((currentLongHi >>> (indexInLong - 32)) | (nextLongLo << (63 - indexInLong) << 1)) & bitMask;
+      }
     }
     return 0;
   }

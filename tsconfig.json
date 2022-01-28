@@ -11,5 +11,7 @@
         "sourceMap": true,
         "noPropertyAccessFromIndexSignature": true
     },
-    "exclude": ["out"]
+    "exclude": [
+        "out"
+    ]
 }
