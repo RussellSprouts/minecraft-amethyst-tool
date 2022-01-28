@@ -97,7 +97,7 @@ export class AnvilParser {
           }
         }
         if (chunkTotal > 0) {
-          result[p(data['xPos'], 0, data['zPos'])] = chunkTotal;
+          result[p(chunk.xPos, 0, chunk.zPos)] = chunkTotal;
         }
       }
     }
@@ -174,12 +174,11 @@ const MINECRAFT_SECTION = {
 
 const CHUNK_FORMAT_SHAPE = {
   'DataVersion': 'int',
-  'xPos': 'int',
-  'yPos': 'int',
-  'zPos': 'int',
 
   // 21w43a+
   'sections': [MINECRAFT_SECTION],
+  'xPos': 'int',
+  'zPos': 'int',
 
   // older versions
   'Level': {
@@ -202,6 +201,14 @@ class ChunkData {
 
   get dataVersion() {
     return this.data['DataVersion'];
+  }
+
+  get xPos() {
+    return this.data['xPos'] ?? this.data['Level']?.['xPos'];
+  }
+
+  get zPos() {
+    return this.data['zPos'] ?? this.data['Level']?.['zPos'];
   }
 }
 
