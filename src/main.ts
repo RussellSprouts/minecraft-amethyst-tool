@@ -4,6 +4,8 @@ import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 import { expected_shards_per_hour_per_face } from './optimization';
 import { AnvilParser } from './anvil';
+import * as pako from "pako";
+import { Nbt } from "./nbt";
 
 const fileSelector = document.getElementById('litematic') as HTMLInputElement;
 fileSelector.addEventListener('change', async () => {
@@ -227,6 +229,19 @@ afkSpot.addEventListener('change', async () => {
   const [offsetX, , offsetZ] = parseP(bestCoords as Point);
   log(`AFK at the coordinates X:${chunkX * 16 + offsetX}, Z: ${chunkZ * 16 + offsetZ} to have ${bestAmount} blocks in range.`);
   console.log(chunkAmountsNW);
+});
+
+const nbtPreview = document.getElementById('nbt') as HTMLInputElement;
+nbtPreview.addEventListener('change', async () => {
+  const fileList = nbtPreview.files ?? [];
+  const contents = await readFile(fileList[0]);
+  let uncompressed = contents;
+  try {
+    uncompressed = pako.ungzip(contents);
+  } catch (e) {
+  }
+
+  console.log(new Nbt('*').parse(uncompressed));
 });
 
 function main(schematic: SchematicReader) {
