@@ -8,6 +8,8 @@
  * the NBT data.
  */
 
+import { checkExhaustive } from "./util";
+
 /** The possible Nbt tags. */
 export const enum Tags {
   End = 0,
@@ -103,10 +105,6 @@ function assert(a: boolean, message: string, path?: string): asserts a is true {
   if (!a) {
     throw new Error(`${message}\n${path}`);
   }
-}
-
-function checkExhaustive(a: never): never {
-  throw new Error(`Unexpected case: ${a}`);
 }
 
 const decoder = new TextDecoder("utf-8");

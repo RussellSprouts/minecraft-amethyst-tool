@@ -3,7 +3,6 @@ import { blockState } from './litematic';
 import { Nbt, ShapeToInterface } from './nbt';
 import { p, Point } from './point';
 import { Renderer } from './renderer';
-import { Virtual3DCanvas } from './virtual_canvas';
 
 const enum DataVersions {
   // First snapshot that leaves extra bits at the end of blockState arrays
