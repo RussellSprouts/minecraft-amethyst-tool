@@ -7,6 +7,8 @@ const faces_per_amethyst = 6;
 const expected_ticks_for_one_stage = avg_ticks_between_random_ticks /
   budding_amethyst_chance_to_tick * faces_per_amethyst;
 
+console.log(expected_ticks_for_one_stage, "EXPECTED");
+
 function calculateOptimalTime() {
   let bestTime = 0;
   let bestExpected = 0;
