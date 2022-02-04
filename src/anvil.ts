@@ -213,9 +213,10 @@ class ChunkData {
 
 class ChunkSection {
   constructor(readonly dataVersion: number, section: Section) {
-    this.palette = (section['block_states']?.['palette']
+    const paletteEntries = section['block_states']?.['palette']
       ?? section['Palette']
-      ?? [{ 'Name': 'minecraft:air', 'Properties': {} }]).map(blockState);
+      ?? [{ 'Name': 'minecraft:air', 'Properties': {} }];
+    this.palette = paletteEntries.map(blockState);
     this.y = section['Y'] ?? 0;
     this.blockStates = section['block_states']?.['data'] ?? section['BlockStates'];
     this.bitsPerBlock = Math.max(Math.ceil(Math.log2(this.palette.length)), 4);
@@ -243,8 +244,8 @@ class ChunkSection {
     if (blockStates) {
       const indexInLong = bitIndex % 64;
       if (indexInLong < 32) {
-        const currentLongLo = blockStates.getUint32(currentLongIndex + 4);
         const currentLongHi = blockStates.getUint32(currentLongIndex);
+        const currentLongLo = blockStates.getUint32(currentLongIndex + 4);
         return ((currentLongLo >>> indexInLong) | (currentLongHi << (31 - indexInLong) << 1)) & bitMask;
       } else {
         const currentLongHi = blockStates.getUint32(currentLongIndex);

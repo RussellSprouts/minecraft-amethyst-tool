@@ -41,7 +41,7 @@ export class Renderer extends EventTarget {
     this.raycaster = new THREE.Raycaster();
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('lightblue');
+    scene.background = new THREE.Color('#333');
 
     this.directionalLightY = new THREE.DirectionalLight(0x777777);
     this.directionalLightY.position.set(0, 1, 0);

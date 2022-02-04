@@ -781,7 +781,7 @@ function main(schematic: SchematicReader) {
   renderer.setBlockState(fx + 2, fy + 2, fz - 6, 'minecraft:redstone_block');
   renderer.setBlockState(fx + 2, fy + 2, fz - 7, 'minecraft:scaffolding');
   renderer.setBlockState(fx + 2, fy + 2, fz - 8, 'minecraft:scaffolding[bottom=true]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 9, 'minecraft:repeater[delay=1,facing=east,locked=false,powered=true]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 9, 'minecraft:repeater[delay=1,facing=east,locked=true,powered=true]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 10, 'minecraft:comparator[facing=north,mode=compare,powered=true]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 11, 'minecraft:comparator[facing=north,mode=subtract,powered=false]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 12, 'minecraft:hopper[enabled=true,facing=north]');
