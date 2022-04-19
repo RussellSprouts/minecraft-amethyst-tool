@@ -1,5 +1,6 @@
 import * as pako from 'pako';
 import { blockState } from './litematic';
+import { readLongPackedArray } from './long_packed_array';
 import { Nbt, ShapeToInterface } from './nbt';
 import { p, Point } from './point';
 import { Renderer } from './renderer';
@@ -11,6 +12,15 @@ const enum DataVersions {
   SNAPSHOT_21w37a = 2834,
   // First snapshot that uses new format for top-level info
   SNAPSHOT_21w43a = 2844,
+}
+
+export const enum HeightMap {
+  MOTION_BLOCKING = 'MOTION_BLOCKING',
+  MOTION_BLOCKING_NO_LEAVES = 'MOTION_BLOCKING_NO_LEAVES',
+  OCEAN_FLOOR = 'OCEAN_FLOOR',
+  OCEAN_FLOOR_WG = 'OCEAN_FLOOR_WG',
+  WORLD_SURFACE = 'WORLD_SURFACE',
+  WORLD_SURFACE_WG = 'WORLD_SURFACE_WG',
 }
 
 const SECTOR_SIZE = 4096;
@@ -42,7 +52,7 @@ const SECTOR_SIZE = 4096;
  * }
  */
 export class AnvilParser {
-  private parsedChunks: Record<string, unknown> = {};
+  private parsedChunks: Record<string, ChunkData> = {};
   constructor(private input: DataView) {
   }
 
@@ -77,17 +87,14 @@ export class AnvilParser {
         const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
         const data = nbtParser.parse(uncompressed);
         const chunk = new ChunkData(data);
-
+        console.log(data);
         let chunkTotal = 0;
         for (const section of chunk.sections) {
-          const indexOfTarget = section.palette.indexOf(state);
-
-          if (indexOfTarget !== -1) {
+          if (section.palette.indexOf(state) !== -1) {
             for (let y = 0; y < 16; y++) {
               for (let z = 0; z < 16; z++) {
                 for (let x = 0; x < 16; x++) {
-                  const state = section.getPaletteIndex(x, y, z);
-                  if (state === indexOfTarget) {
+                  if (section.getBlockState(x, y, z) === state) {
                     chunkTotal++;
                   }
                 }
@@ -119,12 +126,12 @@ export class AnvilParser {
       const basicNbtParser = new Nbt('*');
       const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
 
-      // console.log('Unshaped-data', basicNbtParser.parse(uncompressed));
+      console.log('Unshaped-data', basicNbtParser.parse(uncompressed));
       performance.mark('b');
       performance.measure('unzip', 'a', 'b');
       const data = nbtParser.parse(uncompressed);
       const chunk = new ChunkData(data);
-      // console.log(data);
+      this.parsedChunks[index] = chunk;
 
       performance.mark('c');
       performance.measure('nbt-parse', 'b', 'c');
@@ -137,14 +144,21 @@ export class AnvilParser {
         for (let y = 0; y < 16; y++) {
           for (let z = 0; z < 16; z++) {
             for (let x = 0; x < 16; x++) {
-              const stateIndex = section.getPaletteIndex(x, y, z);
-              const stateString = palette[stateIndex];
+              const stateString = section.getBlockState(x, y, z);
               blockCounts.set(stateString, (blockCounts.get(stateString) ?? 0) + 1);
               // renderer.setBlockState(x, startY * 16 + y, z, stateString);
             }
           }
         }
       }
+
+      for (let z = 0; z < 16; z++) {
+        for (let x = 0; x < 16; x++) {
+          const height = chunk.getHeightMap(HeightMap.WORLD_SURFACE, x, z) - 65;
+          renderer.setBlockState(x, height, z, chunk.getBlockState(x, height, z));
+        }
+      }
+
       performance.mark('d');
       performance.measure('decode', 'c', 'd');
     }
@@ -171,6 +185,15 @@ const MINECRAFT_SECTION = {
   }],
 } as const;
 
+const HEIGHT_MAPS = {
+  'MOTION_BLOCKING': 'longArray',
+  'MOTION_BLOCKING_NO_LEAVES': 'longArray',
+  'OCEAN_FLOOR': 'longArray',
+  'OCEAN_FLOOR_WG': 'longArray',
+  'WORLD_SURFACE': 'longArray',
+  'WORLD_SURFACE_WG': 'longArray',
+} as const;
+
 const CHUNK_FORMAT_SHAPE = {
   'DataVersion': 'int',
 
@@ -178,6 +201,7 @@ const CHUNK_FORMAT_SHAPE = {
   'sections': [MINECRAFT_SECTION],
   'xPos': 'int',
   'zPos': 'int',
+  'Heightmaps': HEIGHT_MAPS,
 
   // older versions
   'Level': {
@@ -185,6 +209,7 @@ const CHUNK_FORMAT_SHAPE = {
     'zPos': 'int',
     'Status': 'string',
     'Sections': [MINECRAFT_SECTION],
+    'Heightmaps': HEIGHT_MAPS
   },
 } as const;
 
@@ -192,11 +217,16 @@ type Section = ShapeToInterface<typeof MINECRAFT_SECTION>;
 
 class ChunkData {
   constructor(readonly data: ShapeToInterface<typeof CHUNK_FORMAT_SHAPE>) {
-    this.sections = this.data?.['sections']?.map(section => new ChunkSection(this.dataVersion, section as Section)) ??
-      this.data?.['Level']?.['Sections']?.map(section => new ChunkSection(this.dataVersion, section as Section)) ?? [];
+    const sectionsData = this.data?.['sections'] ?? this.data?.['Level']?.['Sections'] ?? [];
+    this.sections = sectionsData.map(section => {
+      const result = new ChunkSection(this.dataVersion, section);
+      this.sectionsByY[result.y] = result;
+      return result;
+    });
   }
 
   readonly sections: ChunkSection[];
+  readonly sectionsByY: { [key: number]: ChunkSection } = {};
 
   get dataVersion() {
     return this.data['DataVersion'];
@@ -208,6 +238,24 @@ class ChunkData {
 
   get zPos() {
     return this.data['zPos'] ?? this.data['Level']?.['zPos'];
+  }
+
+  getHeightMap(map: HeightMap, x: number, z: number) {
+    const heightMap = this.data['Heightmaps']?.[map] ?? this.data['Level']?.['Heightmaps']?.[map];
+    if (heightMap) {
+      const blockIndex = x + z * 16;
+      return readLongPackedArray(heightMap, 9, blockIndex, this.dataVersion < DataVersions.SNAPSHOT_20w17a);
+    }
+    return 0;
+  }
+
+  getBlockState(x: number, y: number, z: number): string {
+    const sectionIndex = Math.floor(y / 16);
+    const section = this.sectionsByY[sectionIndex];
+    if (section) {
+      return section.getBlockState(x, y, z);
+    }
+    return 'minecraft:air';
   }
 }
 
@@ -227,32 +275,15 @@ class ChunkSection {
   blockStates: DataView | undefined;
   bitsPerBlock: number;
 
-  getPaletteIndex(x: number, y: number, z: number) {
-    x = x & 0xF;
-    y = y & 0xF;
-    z = z & 0xF;
-    const blockIndex = x + z * 16 + y * 256;
-    const bitMask = (1 << this.bitsPerBlock) - 1;
-    // Before 20w17a, blocks could straddle multiple longs. Afterward, the leftover bits are simply unused.
-    const unusedBitsPerLong = this.dataVersion < DataVersions.SNAPSHOT_20w17a
-      ? 0
-      : 64 % this.bitsPerBlock;
-    const blocksPerLong = Math.floor(64 / this.bitsPerBlock);
-    const bitIndex = blockIndex * this.bitsPerBlock + Math.floor(blockIndex / blocksPerLong) * unusedBitsPerLong;
-    const currentLongIndex = Math.floor(bitIndex / 64) * 8;
+  getBlockState(x: number, y: number, z: number): string {
     const blockStates = this.blockStates;
     if (blockStates) {
-      const indexInLong = bitIndex % 64;
-      if (indexInLong < 32) {
-        const currentLongHi = blockStates.getUint32(currentLongIndex);
-        const currentLongLo = blockStates.getUint32(currentLongIndex + 4);
-        return ((currentLongLo >>> indexInLong) | (currentLongHi << (31 - indexInLong) << 1)) & bitMask;
-      } else {
-        const currentLongHi = blockStates.getUint32(currentLongIndex);
-        const nextLongLo = currentLongIndex + 8 < blockStates.byteLength ? blockStates.getUint32(currentLongIndex + 12) : 0;
-        return ((currentLongHi >>> (indexInLong - 32)) | (nextLongLo << (63 - indexInLong) << 1)) & bitMask;
-      }
+      x = x & 0xF;
+      y = y & 0xF;
+      z = z & 0xF;
+      const blockIndex = x + z * 16 + y * 256;
+      return this.palette[readLongPackedArray(blockStates, this.bitsPerBlock, blockIndex, this.dataVersion < DataVersions.SNAPSHOT_20w17a)];
     }
-    return 0;
+    return 'minecraft:air';
   }
 }

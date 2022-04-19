@@ -47,16 +47,7 @@ regionSelector.addEventListener('change', async () => {
   const allBlocks = new Set<string>();
   const blockCounts = new Map<string, number>();
 
-  for (let x = 0; x < 32; x++) {
-    for (let z = 0; z < 32; z++) {
-      console.log("processing", x, z);
-      parser.parseChunk(x, z, allBlocks, renderer, blockCounts);
-    }
-  }
-  console.log('done.', allBlocks, blockCounts);
-  if (allBlocks.has('minecraft:budding_amethyst')) {
-    console.log('Has budding amethyst!');
-  }
+  parser.parseChunk(0, 0, allBlocks, renderer, blockCounts);
 });
 
 const previewSelector = document.getElementById('preview') as HTMLInputElement;
@@ -775,7 +766,7 @@ function main(schematic: SchematicReader) {
   renderer.setBlockState(fx + 2, fy + 2, fz - 0, 'minecraft:sticky_piston[extended=false,facing=up]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 1, 'minecraft:piston[extended=false,facing=up]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 2, 'minecraft:observer[facing=up]');
-  renderer.setBlockState(fx + 2, fy + 2, fz - 3, 'minecraft:redstone_lamp[facing=up]');
+  renderer.setBlockState(fx + 2, fy + 2, fz - 3, 'minecraft:redstone_lamp');
   renderer.setBlockState(fx + 2, fy + 2, fz - 4, 'minecraft:redstone_lamp[lit=true]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 5, 'minecraft:note_block');
   renderer.setBlockState(fx + 2, fy + 2, fz - 6, 'minecraft:redstone_block');

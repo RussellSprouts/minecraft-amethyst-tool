@@ -69,7 +69,7 @@ export class Renderer extends EventTarget {
     this.scene = scene;
 
     const fov = 75;
-    const aspect = 2;  // the canvas default
+    const aspect = 1;
     const near = 0.1;
     const far = 1000;
     this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
@@ -82,8 +82,26 @@ export class Renderer extends EventTarget {
     // controls.autoRotateSpeed = 20;
     this.controls = controls;
 
+    const handleResize = () => {
+      const canvas = this.renderer.domElement;
+      // look up the size the canvas is being displayed
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+
+      // adjust displayBuffer size to match
+      if (canvas.width !== width || canvas.height !== height) {
+        // you must pass false here or three.js sadly fights the browser
+        this.renderer.setSize(width, height, false);
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.requestRenderIfNotRequested();
+      }
+    };
+
     controls.addEventListener('change', () => this.requestRenderIfNotRequested());
-    window.addEventListener('resize', () => this.requestRenderIfNotRequested());
+    window.addEventListener('resize', () => handleResize());
+    document.querySelector('.main-panel')?.addEventListener('sl-reposition', () => handleResize());
+    document.querySelector('.secondary-panel')?.addEventListener('sl-reposition', () => handleResize());
     this.render();
   }
 

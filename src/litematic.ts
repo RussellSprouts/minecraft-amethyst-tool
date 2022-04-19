@@ -2,6 +2,7 @@
 import { ShapeToInterface, Nbt } from "./nbt";
 import { Virtual3DCanvas } from "./virtual_canvas";
 import * as pako from 'pako';
+import { expandLongPackedArray } from "./long_packed_array";
 
 export const SCHEMATIC_SHAPE = {
   'Version': 'int',
@@ -10,7 +11,7 @@ export const SCHEMATIC_SHAPE = {
     'Name': 'string',
     'Author': 'string',
     'Description': 'string',
-    'EnclosingSize': { x: 'int', y: 'int', z: 'int' },
+    'EnclosingSize': { 'x': 'int', 'y': 'int', 'z': 'int' },
     'TimeCreated': 'long',
     'TimeModified': 'long',
     'TotalBlocks': 'int',
@@ -24,8 +25,8 @@ export const SCHEMATIC_SHAPE = {
         'Properties': { '*': 'string' }
       }],
       'BlockStates': 'longArray',
-      'Position': { x: 'int', y: 'int', z: 'int' },
-      'Size': { x: 'int', y: 'int', z: 'int' },
+      'Position': { 'x': 'int', 'y': 'int', 'z': 'int' },
+      'Size': { 'x': 'int', 'y': 'int', 'z': 'int' },
       'Entities': [{ '*': '*' }],
       'TileEntities': [{ '*': '*' }],
       'PendingBlockTicks': [{ '*': '*' }],
@@ -102,30 +103,11 @@ export class SchematicReader {
     this.regionName = regions[0];
     const region = this.nbtData['Regions'][this.regionName];
     this.palette = region['BlockStatePalette'].map(blockState);
-    const bits = BigInt(bitsForBlockStates(this.palette.length));
-    const mask = (1n << bits) - 1n;
+    const bits = bitsForBlockStates(this.palette.length);
     const width = this.width = Math.abs(region['Size']['x']);
     const height = this.height = Math.abs(region['Size']['y']);
     const length = this.length = Math.abs(region['Size']['z']);
-    this.blocks = new Uint16Array(width * height * length);
-    let offsetBits = 0n;
-
-    for (let y = 0; y < height; y++) {
-      for (let z = 0; z < length; z++) {
-        for (let x = 0; x < width; x++) {
-          const offsetBigInt = (offsetBits / 64n);
-          const offsetBigIntByte = Number(offsetBigInt * 8n);
-          const currentBigInt = region['BlockStates'].getBigUint64(offsetBigIntByte);
-          const nextBigInt = (offsetBigIntByte + 8 < region['BlockStates'].byteLength)
-            ? region['BlockStates'].getBigUint64(offsetBigIntByte + 8)
-            : 0n;
-          const combined = (nextBigInt << 64n) + currentBigInt;
-          const blockState = Number((combined >> (offsetBits % 64n)) & mask);
-          this.blocks[x + width * (z + length * y)] = blockState;
-          offsetBits += bits;
-        }
-      }
-    }
+    this.blocks = expandLongPackedArray(region['BlockStates'], bits, width * height * length, true)
   }
 
   getBlock(x: number, y: number, z: number): string {
