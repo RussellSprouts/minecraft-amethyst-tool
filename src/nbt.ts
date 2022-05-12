@@ -283,6 +283,20 @@ class DataViewReader {
     this.i += result.byteLength;
     return result;
   }
+
+  skip(n: number) {
+    this.i += n;
+  }
+
+  skipString() {
+    const length = this.data.getUint16(this.i);
+    this.i += 2 + length;
+  }
+
+  skipArray(width: number) {
+    const length = this.int();
+    this.i += length * width;
+  }
 }
 
 /**
@@ -321,7 +335,16 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
     return this.parsePayload(data, Tags.Compound, this.shape, 'root') as ShapeToInterface<S>;
   }
 
-  private parsePayload(data: DataViewReader, tagType: Tags, shape: NbtShape, path: string): unknown {
+  /**
+   * Parses the payload value at the current position of the DataViewReader.
+   * 
+   * @param data The data view reader
+   * @param tagType The tag of the payload to parse
+   * @param shape The shape of the data
+   * @param path The path so far, used for error messages
+   * @returns The payload value, based 
+   */
+  private parsePayload<T extends NbtShape>(data: DataViewReader, tagType: Tags, shape: T, path: string): unknown {
     switch (tagType) {
       case Tags.End:
         return undefined;
@@ -351,19 +374,20 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
         return data.array(1);
       case Tags.IntArray:
         this.assertSimpleShape(shape, 'intArray', path);
-        return data.array(4)
+        return data.array(4);
       case Tags.LongArray:
         this.assertSimpleShape(shape, 'longArray', path);
-        return data.array(8)
+        return data.array(8);
       case Tags.Compound: {
         this.assertCompoundShape(shape, path);
         const result: { [key: string]: unknown } = {};
         let tagType: Tags;
         while ((tagType = data.byte()) !== Tags.End) {
           const name = data.string();
-          const payload = this.parsePayload(data, tagType, shapeGet(shape, name), `${path}.${name}`);
           if (shape === '*' || shape['*'] || name in shape) {
-            result[name] = payload;
+            result[name] = this.parsePayload(data, tagType, shapeGet(shape, name), `${path}.${name}`);
+          } else {
+            this.skipPayload(data, tagType);
           }
         }
         return result;
@@ -377,6 +401,68 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
           result.push(this.parsePayload(data, itemType, shapeGet(shape, 0), `${path}[${i}]`));
         }
         return result;
+      }
+      default:
+        checkExhaustive(tagType);
+    }
+  }
+
+  /**
+   * Skips the payload of the given type at the current position of the 
+   * DataViewReader. Simply advances with minimal processing of the data,
+   * so that we can quickly skip over parts that we don't understand.
+   * @param data The data view reader
+   * @param tagType The tag of the payload to skip
+   */
+  private skipPayload(data: DataViewReader, tagType: Tags): void {
+    switch (tagType) {
+      case Tags.End:
+        return undefined;
+      case Tags.Byte:
+        data.skip(1);
+        return;
+      case Tags.Short:
+        data.skip(2);
+        return;
+      case Tags.Int:
+        data.skip(4);
+        return;
+      case Tags.Long:
+        data.skip(8);
+        return;
+      case Tags.Float:
+        data.skip(4);
+        return;
+      case Tags.Double:
+        data.skip(8);
+        return;
+      case Tags.String:
+        data.skipString();
+        return;
+      case Tags.ByteArray:
+        data.skipArray(1);
+        return;
+      case Tags.IntArray:
+        data.skipArray(4);
+        return;
+      case Tags.LongArray:
+        data.skipArray(8);
+        return;
+      case Tags.Compound: {
+        let tagType: Tags;
+        while ((tagType = data.byte()) !== Tags.End) {
+          data.skipString();
+          this.skipPayload(data, tagType);
+        }
+        return;
+      }
+      case Tags.List: {
+        const itemType = data.byte() as Tags;
+        const nItems = data.int();
+        for (let i = 0; i < nItems; i++) {
+          this.skipPayload(data, itemType);
+        }
+        return;
       }
       default:
         checkExhaustive(tagType);
