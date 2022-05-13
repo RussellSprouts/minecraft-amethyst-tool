@@ -1,8 +1,8 @@
 
 import { ShapeToInterface, Nbt } from "./nbt";
 import { Virtual3DCanvas } from "./virtual_canvas";
-import * as pako from 'pako';
 import { expandLongPackedArray } from "./long_packed_array";
+import { compress } from "./compression";
 
 export const SCHEMATIC_SHAPE = {
   'Version': 'int',
@@ -87,14 +87,13 @@ export class SchematicReader {
   readonly nbtData: ShapeToInterface<typeof SCHEMATIC_SHAPE>;
   readonly regionName: string;
   readonly palette: readonly string[];
-  readonly blocks: Uint16Array;
+  readonly blocks: Uint16Array | Uint8Array;
   readonly width: number;
   readonly height: number;
   readonly length: number;
 
-  constructor(fileContents: ArrayBuffer) {
-    const unzipped = pako.ungzip(new Uint8Array(fileContents));
-    this.nbtData = this.nbt.parse(unzipped);
+  constructor(fileContents: Uint8Array) {
+    this.nbtData = this.nbt.parse(fileContents);
     const regions = Object.keys(this.nbtData['Regions']);
     if (regions.length !== 1) {
       console.warn('SchematicReader only supports a single region for now.');
@@ -107,7 +106,7 @@ export class SchematicReader {
     const width = this.width = Math.abs(region['Size']['x']);
     const height = this.height = Math.abs(region['Size']['y']);
     const length = this.length = Math.abs(region['Size']['z']);
-    this.blocks = expandLongPackedArray(region['BlockStates'], bits, width * height * length, true)
+    this.blocks = expandLongPackedArray(region['BlockStates'], bits, width * height * length, true);
   }
 
   getBlock(x: number, y: number, z: number): string {
@@ -280,9 +279,9 @@ export class SchematicWriter {
     };
   }
 
-  save(): Uint8Array {
+  async save(): Promise<Uint8Array> {
     const uncompressed = this.nbt.serialize(this.asNbtData());
-    return pako.gzip(uncompressed);
+    return compress(uncompressed);
   }
 }
 

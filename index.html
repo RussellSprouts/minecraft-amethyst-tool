@@ -12,6 +12,81 @@
 <body>
     <script type="module"
         src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.72/dist/shoelace.js"></script>
+    <section class="main">
+        <h1>Minecraft Amethyst Farm Tutorial</h1>
+
+        <object data="schematics/just-geode-blocks.litematic" type="application/vnd.litematica+nbt"
+            data-camera="9:12:-13.5" data-target="8:7:7" data-autorotate="true" id="intro-geode">
+            <canvas width="720" height="480"></canvas>
+        </object>
+        <sl-range class="revealer" tooltip="none" id="intro-geode-slider" for="intro-geode" value="50"></sl-range>
+
+        <p>This page will show you how to build a farm to automatically collect amethyst shards in Minecraft. You can
+            load a geode from your world, or follow along with the example geode
+            above. It uses the concept originally developed by Neffty, and refined by Ilmango in <a
+                href="https://www.youtube.com/watch?v=fY90xF3ug84">this video</a>. All of the models
+            on this page are interactive! Use your mouse to rotate and zoom. Use the slider to reveal the budding
+            amethyst blocks.
+
+        <h2>1. Choose a geode</h2>
+
+        <sl-tab-group>
+            <sl-tab slot="nav" panel="sample">Use the sample geode</sl-tab>
+            <sl-tab slot="nav" panel="region">Load from your world</sl-tab>
+            <sl-tab slot="nav" panel="litematic">Load a .litematic</sl-tab>
+
+            <sl-tab-panel name="sample">We'll use the geode above as an example.</sl-tab-panel>
+            <sl-tab-panel name="region">
+                We'll pick a geode from your world. For this option, you'll need access to your world files.
+                Select all of the .mca and .mcc files in your world's <code>region</code> folder. It's OK if you don't
+                see any .mcc files &mdash; those are rare.
+                <br>
+                <input type="file" id="region-files" multiple>
+                <sl-progress-bar id="region-files-progress" style="visibility:hidden"></sl-progress-bar>
+                <div id="all-geodes">
+                </div>
+            </sl-tab-panel>
+            <sl-tab-panel name="litematic">
+                We'll load a geode from a litematica schematic file.
+                <label><input type="file" multiple> .litematic file</label>
+            </sl-tab-panel>
+        </sl-tab-group>
+
+        <h2>2. Analyze geode</h2>
+        <blockquote>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus magna. Cras in mi at felis aliquet
+                congue.
+                Ut a est eget ligula molestie gravida. Curabitur massa. Donec eleifend, libero at sagittis mollis,
+                tellus
+                est malesuada tellus, at luctus turpis elit sit amet quam. Vivamus pretium ornare est.</p>
+        </blockquote>
+
+        <h3>Header Level 3</h3>
+
+        <ul>
+            <li>Lorem ipsum dolor sit amet, consectetuer adipiscing elit.</li>
+            <li>Aliquam tincidunt mauris eu risus.</li>
+        </ul>
+
+        <pre><code>
+            #header h1 a {
+              display: block;
+              width: 300px;
+              height: 80px;
+            }
+            </code></pre>
+
+        <dl>
+            <dt>Definition list</dt>
+            <dd>Consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+                aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+                commodo consequat.</dd>
+            <dt>Lorem ipsum dolor sit amet</dt>
+            <dd>Consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+                aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+                commodo consequat.</dd>
+        </dl>
+    </section>
     <sl-split-panel primary="start" position="25" class="main-panel">
         <div slot="start" style="max-height: 100vh;overflow: auto;">
             <label>.litematic file <input id="litematic" type="file"></label>
@@ -61,6 +136,7 @@
     </sl-split-panel>
     <script type="text/javascript" src="third_party/three.js/three.min.js"></script>
     <script type="text/javascript" src="third_party/pako/pako.min.js"></script>
+    <script type="text/javascript" src="third_party/fflate/fflate.js"></script>
     <script type="text/javascript" src="out/renderer.js"></script>
     <script type="text/javascript" src="out/main.js"></script>
 </body>

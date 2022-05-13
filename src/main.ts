@@ -1,13 +1,43 @@
-import { SchematicReader, IntRange } from "./litematic";
+import { SchematicReader, IntRange, parseBlockState } from "./litematic";
 import { Point, p, parseP } from './point';
 import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 import { expected_shards_per_hour_per_face } from './optimization';
-import { AnvilParser } from './anvil';
-import * as pako from "pako";
+import { AnvilParser, RegionCollection } from './anvil';
 import { Nbt } from "./nbt";
+import { assertIsElement } from "./util";
+import { decompress } from "./compression";
+import { loadEmbeddedSchematics } from "./embedded_schematics";
 
-const fileSelector = document.getElementById('litematic') as HTMLInputElement;
+document.addEventListener('DOMContentLoaded', () => {
+  loadEmbeddedSchematics();
+});
+
+const regionFilesSelector = assertIsElement(document.getElementById('region-files'), HTMLInputElement);
+regionFilesSelector.addEventListener('change', async () => {
+  const progressBar = document.getElementById('region-files-progress') as HTMLInputElement;
+  console.log(document.getElementById('region-files-progress'));
+  progressBar.style.visibility = 'visible';
+
+  const fileList = regionFilesSelector.files ?? [];
+  const regionCollection = new RegionCollection(fileList);
+  console.log("READING RANDOM POINT", await regionCollection.getBlockState(9, 14, -133));
+
+  const start = Date.now();
+  console.log('START', start);
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    progressBar.value = `${100 * (i / fileList.length)}`;
+    const fileContents = await readFile(file);
+    const parser = new AnvilParser(new DataView(fileContents.buffer));
+    const allBlocks = await parser.countBlocks('minecraft:budding_amethyst');
+    console.log('BUDDING', allBlocks.size, allBlocks);
+  }
+  progressBar.value = '100';
+  console.log('END', Date.now() - start);
+});
+
+const fileSelector = assertIsElement(document.getElementById('litematic'), HTMLInputElement);
 fileSelector.addEventListener('change', async () => {
   const fileList = fileSelector.files;
   if (!fileList || fileList.length > 1) {
@@ -19,11 +49,12 @@ fileSelector.addEventListener('change', async () => {
   console.log(fileList);
 
   const fileContents = await readFile(fileList[0]);
-  const schematic = new SchematicReader(fileContents);
+  const unpacked = await decompress(fileContents);
+  const schematic = new SchematicReader(unpacked);
   main(schematic);
 });
 
-const regionSelector = document.getElementById('region') as HTMLInputElement;
+const regionSelector = assertIsElement(document.getElementById('region'), HTMLInputElement);
 regionSelector.addEventListener('change', async () => {
   const fileList = regionSelector.files;
   if (!fileList || fileList.length > 1) {
@@ -44,13 +75,10 @@ regionSelector.addEventListener('change', async () => {
   const fileContents = await readFile(fileList[0]);
   const parser = new AnvilParser(new DataView(fileContents.buffer));
 
-  const allBlocks = new Set<string>();
-  const blockCounts = new Map<string, number>();
-
-  parser.parseChunk(0, 0, allBlocks, renderer, blockCounts);
+  parser.parseChunk(0, 0);
 });
 
-const previewSelector = document.getElementById('preview') as HTMLInputElement;
+const previewSelector = assertIsElement(document.getElementById('preview'), HTMLInputElement);
 previewSelector.addEventListener('change', async () => {
   const fileList = previewSelector.files;
   if (!fileList || fileList.length > 1) {
@@ -63,7 +91,8 @@ previewSelector.addEventListener('change', async () => {
   console.log(fileList);
 
   const fileContents = await readFile(fileList[0]);
-  const schematic = new SchematicReader(fileContents);
+  const unpacked = await decompress(fileContents);
+  const schematic = new SchematicReader(unpacked);
   const renderer = new Renderer('#c');
 
   const blockReadout = document.getElementById('block-readout')!;
@@ -76,14 +105,23 @@ previewSelector.addEventListener('change', async () => {
     for (let z = 0; z < schematic.length; z++) {
       for (let x = 0; x < schematic.width; x++) {
         const block = schematic.getBlock(x, y, z);
-        renderer.setBlockState(x, y, z, block);
+        const name = parseBlockState(block);
+        if (['minecraft:smooth_basalt', 'minecraft:calcite', 'minecraft:amethyst_block',
+          'minecraft:budding_amethyst', 'minecraft:amethyst_cluster', 'minecraft:large_amethyst_bud',
+          'minecraft:medium_amethyst_bud', 'minecraft:small_amethyst_bud'].indexOf(name['Name']) > -1) {
+          renderer.setBlockState(x, y, z, block);
+        }
       }
     }
   }
+
+  document.getElementById('save')!.onclick = async () => {
+    saveFile(await renderer.toSchematic().save(), 'geode-farm-export.litematic');
+  };
 });
 
-const sampleButton = document.getElementById('sample') as HTMLButtonElement;
-sampleButton.addEventListener('click', () => {
+const sampleButton = assertIsElement(document.getElementById('sample'), HTMLButtonElement);
+sampleButton.addEventListener('click', async () => {
   const fileContents = new Uint8Array([
     31, 139, 8, 0, 0, 0, 0, 0, 0, 255, 141, 84, 193, 78, 220, 48,
     16, 125, 238, 134, 146, 205, 178, 37, 149, 232, 133, 79, 64, 226, 194, 177,
@@ -116,12 +154,13 @@ sampleButton.addEventListener('click', () => {
     88, 94, 19, 74, 156, 101, 150, 134, 22, 30, 11, 95, 213, 20, 127, 1,
     31, 118, 161, 121, 155, 4, 0, 0,
   ]);
-  const schematic = new SchematicReader(fileContents);
+  const unpacked = await decompress(fileContents);
+  const schematic = new SchematicReader(unpacked);
   main(schematic);
 });
 
-const afkSpot = document.getElementById('afk') as HTMLInputElement;
-const afkLog = document.getElementById('afk-spot-log') as HTMLElement;
+const afkSpot = assertIsElement(document.getElementById('afk'), HTMLInputElement);
+const afkLog = assertIsElement(document.getElementById('afk-spot-log'), HTMLElement);
 afkSpot.addEventListener('change', async () => {
   afkLog.textContent = '';
   const fileList = Array.from(afkSpot.files ?? []);
@@ -167,7 +206,7 @@ afkSpot.addEventListener('change', async () => {
 
       const fileContents = await readFile(file);
       const parser = new AnvilParser(new DataView(fileContents.buffer));
-      const chunksWithGeodes = parser.countBlocks('minecraft:budding_amethyst');
+      const chunksWithGeodes = parser.countBlocks('minecraft:budding_amethyst') as any;
       let total = 0;
       const chunks = Object.keys(chunksWithGeodes) as Point[];
       for (const chunk of chunks) {
@@ -222,13 +261,13 @@ afkSpot.addEventListener('change', async () => {
   console.log(chunkAmountsNW);
 });
 
-const nbtPreview = document.getElementById('nbt') as HTMLInputElement;
+const nbtPreview = assertIsElement(document.getElementById('nbt'), HTMLInputElement);
 nbtPreview.addEventListener('change', async () => {
   const fileList = nbtPreview.files ?? [];
   const contents = await readFile(fileList[0]);
   let uncompressed = contents;
   try {
-    uncompressed = pako.ungzip(contents);
+    uncompressed = await decompress(contents);
   } catch (e) {
   }
 
@@ -549,9 +588,9 @@ function main(schematic: SchematicReader) {
   ];
 
   console.log('y slime used', y_slime_used);
-  create2dView(document.querySelector('.x-axis') as HTMLElement, x_slime_used, x_slime, x_coords, min_bud_y, max_bud_y, min_bud_z, max_bud_z, (y, z) => p(fx, y, z));
-  create2dView(document.querySelector('.y-axis') as HTMLElement, y_slime_used, y_slime, y_coords, min_bud_x, max_bud_x, min_bud_z, max_bud_z, (x, z) => p(x, fy, z));
-  create2dView(document.querySelector('.z-axis') as HTMLElement, z_slime_used, z_slime, z_coords, min_bud_y, max_bud_y, min_bud_x, max_bud_x, (y, x) => p(x, y, fz));
+  create2dView(assertIsElement(document.querySelector('.x-axis'), HTMLElement), x_slime_used, x_slime, x_coords, min_bud_y, max_bud_y, min_bud_z, max_bud_z, (y, z) => p(fx, y, z));
+  create2dView(assertIsElement(document.querySelector('.y-axis'), HTMLElement), y_slime_used, y_slime, y_coords, min_bud_x, max_bud_x, min_bud_z, max_bud_z, (x, z) => p(x, fy, z));
+  create2dView(assertIsElement(document.querySelector('.z-axis'), HTMLElement), z_slime_used, z_slime, z_coords, min_bud_y, max_bud_y, min_bud_x, max_bud_x, (y, x) => p(x, y, fz));
 
   function create2dView(
     element: HTMLElement,
@@ -564,7 +603,7 @@ function main(schematic: SchematicReader) {
     max_bud_b: number,
     p: (a: number, b: number) => Point) {
     const controllers: Record<Point, ButtonController> = {};
-    const container = element.querySelector('.grid') as HTMLElement;
+    const container = assertIsElement(element.querySelector('.grid'), HTMLElement);
     const machineCountContainer = element.querySelector('.count')!;
 
     class ButtonController {
@@ -789,8 +828,8 @@ function main(schematic: SchematicReader) {
   // 2. For each possible position of a flying machine, expand outward by converting
   //    blocks to slime until you reach push limit.
 
-  document.getElementById('save')!.onclick = () => {
-    saveFile(renderer.toSchematic().save(), 'geode-farm-export.litematic');
+  document.getElementById('save')!.onclick = async () => {
+    saveFile(await renderer.toSchematic().save(), 'geode-farm-export.litematic');
   };
 
   // renderer.animate(-1, 5, (frame) => {
