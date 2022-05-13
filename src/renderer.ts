@@ -4,6 +4,7 @@ import { Point, p, parseP } from './point';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as textures from '../textures/index';
 import { getBlockInfo } from './blocks/index';
+import { assertIsElement } from './util';
 
 const spriteSheet = new THREE.TextureLoader().load(textures.image);
 spriteSheet.minFilter = THREE.NearestFilter;
@@ -26,11 +27,23 @@ export class Renderer extends EventTarget {
   ambientLight: THREE.AmbientLight;
   raycaster: THREE.Raycaster;
   mouse: THREE.Vector2;
+  inView = true;
+  intersectionObserver: IntersectionObserver;
 
-  constructor(cssQuery: string) {
+  constructor(cssQuery: string | HTMLCanvasElement) {
     super();
-    const canvas = document.querySelector(cssQuery) as HTMLCanvasElement;
-    this.renderer = new THREE.WebGLRenderer({ canvas });
+    const canvas = typeof cssQuery === 'string'
+      ? assertIsElement(document.querySelector(cssQuery), HTMLCanvasElement)
+      : cssQuery;
+
+    this.intersectionObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        this.inView = entry.isIntersecting;
+      }
+    });
+    this.intersectionObserver.observe(canvas);
+
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.mouse = new THREE.Vector2();
     canvas.addEventListener('mousemove', (event) => {
       const rect = canvas.getBoundingClientRect();
@@ -41,7 +54,7 @@ export class Renderer extends EventTarget {
     this.raycaster = new THREE.Raycaster();
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#333');
+    scene.background = new THREE.Color('#fff');
 
     this.directionalLightY = new THREE.DirectionalLight(0x777777);
     this.directionalLightY.position.set(0, 1, 0);
@@ -142,6 +155,11 @@ export class Renderer extends EventTarget {
   }
 
   render() {
+    if (!this.inView) {
+      requestAnimationFrame(() => this.render());
+      return;
+    }
+
     this.renderRequested = false;
 
     if (this.resizeRendererToDisplaySize()) {
@@ -151,9 +169,7 @@ export class Renderer extends EventTarget {
     }
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    for (const object of this.scene.children) {
-      object.visible = true;
-    }
+
     const intersects = this.raycaster.intersectObjects(this.scene.children);
     for (const object of intersects) {
       const x = object.object.position.x | 0;

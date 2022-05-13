@@ -125,14 +125,17 @@ export function texturedCube(
   ];
 
   const newUvs = new Float32Array(uvs);
+  const textureMapHeight = textures.nImages * 17 - 1;
   for (let i = 0; i < newUvs.length; i += 2) {
     const faceIndex = Math.floor(i / 8);
     const face = faces[faceIndex];
     const [textureWidth, textureHeight] = sizes[faceIndex];
     const uvStartX = 0;
     const uvEndX = textureWidth / 16;
-    const uvStartY = (textures.nImages - face - textureHeight / 16) / textures.nImages;
-    const uvEndY = (textures.nImages - face) / textures.nImages;
+    const startPxY = face * 17;
+    const endPxY = face * 17 + textureHeight;
+    const uvStartY = 1 - (endPxY / textureMapHeight);
+    const uvEndY = 1 - (startPxY / textureMapHeight);
     newUvs[i] = newUvs[i] ? uvEndX : uvStartX; // x
     newUvs[i + 1] = newUvs[i + 1] ? uvEndY : uvStartY; // y
   }

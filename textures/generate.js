@@ -23,6 +23,7 @@ console.log('PNG FILE', pngFile);
             format: 'json-hash',
             filenameFormat: '{frame}',
             listTags: '',
+            shapePadding: 1,
         });
     } catch (e) {
         console.log('Sprite sheet failed -- assuming data has been exported already.');
@@ -54,10 +55,10 @@ console.log('PNG FILE', pngFile);
     for (const tag of jsonData.meta.frameTags) {
         const { name, from } = tag;
         const frameData = jsonData.frames[from];
-        outputFile += `export const ${name} = ${Math.floor(frameData.frame.y / 16)};\n`;
+        outputFile += `export const ${name} = ${Math.floor(frameData.frame.y / 17)};\n`;
     }
 
-    outputFile += `export const nImages = ${Math.floor(jsonData.meta.size.h / 16)};\n`
+    outputFile += `export const nImages = ${Math.floor((jsonData.meta.size.h + 1) / 17)};\n`
 
     await promisify(fs.writeFile)(outputFileName, outputFile, 'utf8');
 })().catch(console.error);
