@@ -344,7 +344,7 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
    * @param path The path so far, used for error messages
    * @returns The payload value, based 
    */
-  private parsePayload<T extends NbtShape>(data: DataViewReader, tagType: Tags, shape: T, path: string): unknown {
+  private parsePayload(data: DataViewReader, tagType: Tags, shape: NbtShape, path: string): unknown {
     switch (tagType) {
       case Tags.End:
         return undefined;
