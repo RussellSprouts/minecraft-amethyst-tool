@@ -107,6 +107,10 @@ export class AnvilParser {
    * Returns a map of chunk coordinate to number of blocks.
    */
   async countBlocks(state: string): Promise<Set<string>> {
+    if (this.input.byteLength === 0) {
+      return new Set();
+    }
+
     const result = new Set<string>();
     for (let x = 0; x < 32; x++) {
       for (let z = 0; z < 32; z++) {

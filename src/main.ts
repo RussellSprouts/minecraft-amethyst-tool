@@ -3,41 +3,39 @@ import { Point, p, parseP } from './point';
 import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 import { expected_shards_per_hour_per_face } from './optimization';
-import { AnvilParser, RegionCollection } from './anvil';
+import { AnvilParser } from './anvil';
 import { Nbt } from "./nbt";
-import { assertIsElement } from "./util";
+import { assertInstanceOf } from "./util";
 import { decompress } from "./compression";
 import { loadEmbeddedSchematics } from "./embedded_schematics";
+import { createNamedWorker } from "./run_in_worker";
+import { processRegionFiles } from "./region_files_worker";
+
+createNamedWorker('general');
+createNamedWorker('special');
 
 document.addEventListener('DOMContentLoaded', () => {
   loadEmbeddedSchematics();
 });
 
-const regionFilesSelector = assertIsElement(document.getElementById('region-files'), HTMLInputElement);
+const regionFilesSelector = assertInstanceOf(document.getElementById('region-files'), HTMLInputElement);
 regionFilesSelector.addEventListener('change', async () => {
   const progressBar = document.getElementById('region-files-progress') as HTMLInputElement;
   console.log(document.getElementById('region-files-progress'));
   progressBar.style.visibility = 'visible';
 
-  const fileList = regionFilesSelector.files ?? [];
-  const regionCollection = new RegionCollection(fileList);
-  console.log("READING RANDOM POINT", await regionCollection.getBlockState(9, 14, -133));
-
-  const start = Date.now();
-  console.log('START', start);
-  for (let i = 0; i < fileList.length; i++) {
-    const file = fileList[i];
-    progressBar.value = `${100 * (i / fileList.length)}`;
-    const fileContents = await readFile(file);
-    const parser = new AnvilParser(new DataView(fileContents.buffer));
-    const allBlocks = await parser.countBlocks('minecraft:budding_amethyst');
-    console.log('BUDDING', allBlocks.size, allBlocks);
+  const fileList = regionFilesSelector.files;
+  if (fileList) {
+    const { promise, progress } = processRegionFiles(fileList);
+    progress.addEventListener('progress', (event) => {
+      const e = event as CustomEvent;
+      progressBar.value = e.detail;
+    });
+    await promise;
   }
-  progressBar.value = '100';
-  console.log('END', Date.now() - start);
 });
 
-const fileSelector = assertIsElement(document.getElementById('litematic'), HTMLInputElement);
+const fileSelector = assertInstanceOf(document.getElementById('litematic'), HTMLInputElement);
 fileSelector.addEventListener('change', async () => {
   const fileList = fileSelector.files;
   if (!fileList || fileList.length > 1) {
@@ -54,7 +52,7 @@ fileSelector.addEventListener('change', async () => {
   main(schematic);
 });
 
-const regionSelector = assertIsElement(document.getElementById('region'), HTMLInputElement);
+const regionSelector = assertInstanceOf(document.getElementById('region'), HTMLInputElement);
 regionSelector.addEventListener('change', async () => {
   const fileList = regionSelector.files;
   if (!fileList || fileList.length > 1) {
@@ -78,7 +76,7 @@ regionSelector.addEventListener('change', async () => {
   parser.parseChunk(0, 0);
 });
 
-const previewSelector = assertIsElement(document.getElementById('preview'), HTMLInputElement);
+const previewSelector = assertInstanceOf(document.getElementById('preview'), HTMLInputElement);
 previewSelector.addEventListener('change', async () => {
   const fileList = previewSelector.files;
   if (!fileList || fileList.length > 1) {
@@ -120,7 +118,7 @@ previewSelector.addEventListener('change', async () => {
   };
 });
 
-const sampleButton = assertIsElement(document.getElementById('sample'), HTMLButtonElement);
+const sampleButton = assertInstanceOf(document.getElementById('sample'), HTMLButtonElement);
 sampleButton.addEventListener('click', async () => {
   const fileContents = new Uint8Array([
     31, 139, 8, 0, 0, 0, 0, 0, 0, 255, 141, 84, 193, 78, 220, 48,
@@ -159,8 +157,8 @@ sampleButton.addEventListener('click', async () => {
   main(schematic);
 });
 
-const afkSpot = assertIsElement(document.getElementById('afk'), HTMLInputElement);
-const afkLog = assertIsElement(document.getElementById('afk-spot-log'), HTMLElement);
+const afkSpot = assertInstanceOf(document.getElementById('afk'), HTMLInputElement);
+const afkLog = assertInstanceOf(document.getElementById('afk-spot-log'), HTMLElement);
 afkSpot.addEventListener('change', async () => {
   afkLog.textContent = '';
   const fileList = Array.from(afkSpot.files ?? []);
@@ -261,7 +259,7 @@ afkSpot.addEventListener('change', async () => {
   console.log(chunkAmountsNW);
 });
 
-const nbtPreview = assertIsElement(document.getElementById('nbt'), HTMLInputElement);
+const nbtPreview = assertInstanceOf(document.getElementById('nbt'), HTMLInputElement);
 nbtPreview.addEventListener('change', async () => {
   const fileList = nbtPreview.files ?? [];
   const contents = await readFile(fileList[0]);
@@ -588,9 +586,9 @@ function main(schematic: SchematicReader) {
   ];
 
   console.log('y slime used', y_slime_used);
-  create2dView(assertIsElement(document.querySelector('.x-axis'), HTMLElement), x_slime_used, x_slime, x_coords, min_bud_y, max_bud_y, min_bud_z, max_bud_z, (y, z) => p(fx, y, z));
-  create2dView(assertIsElement(document.querySelector('.y-axis'), HTMLElement), y_slime_used, y_slime, y_coords, min_bud_x, max_bud_x, min_bud_z, max_bud_z, (x, z) => p(x, fy, z));
-  create2dView(assertIsElement(document.querySelector('.z-axis'), HTMLElement), z_slime_used, z_slime, z_coords, min_bud_y, max_bud_y, min_bud_x, max_bud_x, (y, x) => p(x, y, fz));
+  create2dView(assertInstanceOf(document.querySelector('.x-axis'), HTMLElement), x_slime_used, x_slime, x_coords, min_bud_y, max_bud_y, min_bud_z, max_bud_z, (y, z) => p(fx, y, z));
+  create2dView(assertInstanceOf(document.querySelector('.y-axis'), HTMLElement), y_slime_used, y_slime, y_coords, min_bud_x, max_bud_x, min_bud_z, max_bud_z, (x, z) => p(x, fy, z));
+  create2dView(assertInstanceOf(document.querySelector('.z-axis'), HTMLElement), z_slime_used, z_slime, z_coords, min_bud_y, max_bud_y, min_bud_x, max_bud_x, (y, x) => p(x, y, fz));
 
   function create2dView(
     element: HTMLElement,
@@ -603,7 +601,7 @@ function main(schematic: SchematicReader) {
     max_bud_b: number,
     p: (a: number, b: number) => Point) {
     const controllers: Record<Point, ButtonController> = {};
-    const container = assertIsElement(element.querySelector('.grid'), HTMLElement);
+    const container = assertInstanceOf(element.querySelector('.grid'), HTMLElement);
     const machineCountContainer = element.querySelector('.count')!;
 
     class ButtonController {
@@ -822,6 +820,26 @@ function main(schematic: SchematicReader) {
   renderer.setBlockState(fx + 2, fy + 2, fz - 17, 'minecraft:amethyst_cluster[facing=down]');
   renderer.setBlockState(fx + 2, fy + 2, fz - 18, 'minecraft:stone_bricks');
   renderer.setBlockState(fx + 2, fy + 2, fz - 19, 'minecraft:amethyst_block');
+
+  renderer.setBlockState(fx + 5, fy + 5, fz, 'minecraft:sticky_piston[facing=south]');
+  renderer.setBlockState(fx + 5, fy + 5, fz - 1, 'minecraft:redstone_lamp');
+  renderer.setBlockState(fx + 5, fy + 5, fz - 2, 'minecraft:observer[facing=south]');
+  renderer.setBlockState(fx + 5, fy + 5, fz - 3, 'minecraft:sticky_piston[facing=north]');
+  renderer.setBlockState(fx + 5, fy + 5, fz - 4, 'minecraft:slime_block');
+  renderer.setBlockState(fx + 5, fy + 5, fz - 5, 'minecraft:slime_block');
+  renderer.setBlockState(fx + 5, fy + 5, fz - 6, 'minecraft:slime_block');
+
+  renderer.setBlockState(fx + 5, fy + 6, fz, 'minecraft:slime_block');
+  renderer.setBlockState(fx + 5, fy + 6, fz - 1, 'minecraft:observer[facing=up]');
+  renderer.setBlockState(fx + 5, fy + 6, fz - 2, 'minecraft:slime_block');
+  renderer.setBlockState(fx + 5, fy + 6, fz - 3, 'minecraft:slime_block');
+  renderer.setBlockState(fx + 5, fy + 6, fz - 4, 'minecraft:sticky_piston[facing=south]');
+  renderer.setBlockState(fx + 5, fy + 6, fz - 5, 'minecraft:observer[facing=north]');
+  renderer.setBlockState(fx + 5, fy + 6, fz - 6, 'minecraft:note_block');
+
+  renderer.setBlockState(fx + 5, fy + 7, fz, 'minecraft:slime_block');
+  renderer.setBlockState(fx + 5, fy + 7, fz - 1, 'minecraft:slime_block');
+  renderer.setBlockState(fx + 5, fy + 7, fz - 2, 'minecraft:slime_block');
 
   // The problem of generating the flying machines:
   // 1. Start with all slime blocks initialized as regular blocks

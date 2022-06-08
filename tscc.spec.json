@@ -1,10 +1,22 @@
 {
     "modules": {
-        "renderer": "src/renderer.ts",
+        "root": "src/root.ts",
+        "renderer": {
+            "entry": "src/renderer.ts",
+            "dependencies": [
+                "root"
+            ]
+        },
         "main": {
             "entry": "src/main.ts",
             "dependencies": [
                 "renderer"
+            ]
+        },
+        "worker": {
+            "entry": "src/worker.ts",
+            "dependencies": [
+                "root"
             ]
         }
     },

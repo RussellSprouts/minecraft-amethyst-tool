@@ -1,6 +1,6 @@
 import { Renderer } from './renderer';
 import { SchematicReader } from './litematic';
-import { assertIsElement } from './util';
+import { assertInstanceOf } from './util';
 import { parseP, Point } from './point';
 import { decompress } from './compression';
 
@@ -20,7 +20,7 @@ export async function loadEmbeddedSchematics() {
 
   for (const { embed, data } of fetchData) {
     if (data) {
-      const canvas = assertIsElement(embed.querySelector('canvas'), HTMLCanvasElement);
+      const canvas = assertInstanceOf(embed.querySelector('canvas'), HTMLCanvasElement);
 
       const renderer = new Renderer(canvas);
       renderer.controls.autoRotate = embed.dataset['autorotate'] === "true";

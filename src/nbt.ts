@@ -31,9 +31,7 @@ interface NbtCompoundShape {
   readonly [key: string]: NbtShape;
 }
 
-interface NbtListShape {
-  readonly 0: NbtShape;
-}
+type NbtListShape = readonly [NbtShape];
 
 interface NbtCompoundMapShape {
   readonly '*': NbtShape;

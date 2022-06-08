@@ -10,7 +10,8 @@
         "strict": true,
         "sourceMap": true,
         "noPropertyAccessFromIndexSignature": true,
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true
     },
     "exclude": [
         "out",

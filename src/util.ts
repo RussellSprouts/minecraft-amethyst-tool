@@ -3,10 +3,10 @@ export function checkExhaustive(a: never): never {
   throw new Error(`Unexpected case: ${a}`);
 }
 
-export function assertIsElement<T extends Element>(element: Element | null | undefined, elementType: { new(): T }): T {
-  if (!(element instanceof elementType)) {
-    throw new Error(`Expected element ${element} to be ${elementType}`);
+export function assertInstanceOf<T>(value: unknown, constructorType: { new(...args: any[]): T }): T {
+  if (!(value instanceof constructorType)) {
+    throw new Error(`Expected element ${value} to be ${constructorType}`);
   }
 
-  return element;
+  return value;
 }

@@ -721,7 +721,7 @@
    }
  },
  "meta": {
-  "app": "https://www.aseprite.org/",
+  "app": "http://www.aseprite.org/",
   "version": "1.2.34.1-x64",
   "image": "all.png",
   "format": "RGBA8888",
