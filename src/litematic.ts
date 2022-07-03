@@ -80,33 +80,82 @@ function bitsForBlockStates(nPaletteEntries: number): number {
 }
 
 /**
- * Reads the first region from a schematic.
+ * Keeps track of the palette assignments.
+ */
+export class PaletteManager {
+  private readonly palette: { [blockState: string]: number } = { 'minecraft:air': 0 };
+  private readonly paletteList = ['minecraft:air'];
+
+  getOrCreatePaletteIndex(blockState: string) {
+    if (this.palette[blockState] !== undefined) {
+      return this.palette[blockState];
+    }
+    this.paletteList.push(blockState);
+    this.palette[blockState] = this.paletteList.length - 1;
+    return this.palette[blockState];
+  }
+
+  getBlockState(n: number) {
+    return this.paletteList[n] ?? 'minecraft:air';
+  }
+
+  bits() {
+    return bitsForBlockStates(this.paletteList.length);
+  }
+
+  toNbt() {
+    return this.paletteList.map(parseBlockState);
+  }
+}
+
+/**
+ * Reads a schematic.
  */
 export class SchematicReader {
   readonly nbt = new Nbt(SCHEMATIC_SHAPE);
   readonly nbtData: ShapeToInterface<typeof SCHEMATIC_SHAPE>;
-  readonly regionName: string;
-  readonly palette: readonly string[];
-  readonly blocks: Uint16Array | Uint8Array;
-  readonly width: number;
-  readonly height: number;
-  readonly length: number;
+  readonly palette = new PaletteManager();
+  readonly blocks = new Virtual3DCanvas();
 
   constructor(fileContents: Uint8Array) {
     this.nbtData = this.nbt.parse(fileContents);
     const regions = Object.keys(this.nbtData['Regions']);
-    if (regions.length !== 1) {
-      console.warn('SchematicReader only supports a single region for now.');
-    }
 
-    this.regionName = regions[0];
-    const region = this.nbtData['Regions'][this.regionName];
-    this.palette = region['BlockStatePalette'].map(blockState);
-    const bits = bitsForBlockStates(this.palette.length);
-    const width = this.width = Math.abs(region['Size']['x']);
-    const height = this.height = Math.abs(region['Size']['y']);
-    const length = this.length = Math.abs(region['Size']['z']);
-    this.blocks = expandLongPackedArray(region['BlockStates'], bits, width * height * length, true);
+    for (const regionName of regions) {
+      const region = this.nbtData['Regions'][regionName];
+      const palette = region['BlockStatePalette'].map(blockState);
+      const bits = bitsForBlockStates(palette.length);
+      // A region is defined in the UI as two corner points,
+      // but is saved as point 1 (position) and a size. If
+      // the size is negative in an axis, then it indicates
+      // that point 2 is less in that axis, so we adjust to
+      // get the starting point of the blockstates array, which
+      // is always to lower of the two points.
+      const width = region['Size']['x'];
+      const height = region['Size']['y'];
+      const length = region['Size']['z'];
+      const rx = region['Position']['x'] + (width < 0 ? width + 1 : 0);
+      const ry = region['Position']['y'] + (height < 0 ? height + 1 : 0);
+      const rz = region['Position']['z'] + (length < 0 ? length + 1 : 0);
+
+      const blocks = expandLongPackedArray(region['BlockStates'], bits, Math.abs(width * height * length), true);
+
+      // Copy the data onto the 3d canvas with the combined palette.
+      for (let y = 0, i = 0; y < Math.abs(height); y++) {
+        for (let z = 0; z < Math.abs(length); z++) {
+          for (let x = 0; x < Math.abs(width); x++, i++) {
+            const block = blocks[i];
+            const paletteIndex = this.palette.getOrCreatePaletteIndex(palette[block]);
+            this.blocks.set(
+              rx + x,
+              ry + y,
+              rz + z,
+              paletteIndex
+            );
+          }
+        }
+      }
+    }
   }
 
   getBlock(x: number, y: number, z: number): string {
@@ -115,8 +164,11 @@ export class SchematicReader {
       || z < 0 || z >= this.length) {
       return 'minecraft:air';
     }
-    const index = x + this.width * (z + this.length * y);
-    return this.palette[this.blocks[index]];
+    return this.palette.getBlockState(this.blocks.get(
+      this.blocks.minx + x,
+      this.blocks.miny + y,
+      this.blocks.minz + z
+    ));
   }
 
   get version() {
@@ -151,16 +203,24 @@ export class SchematicReader {
     return this.nbtData['Metadata']['EnclosingSize'];
   }
 
+  get width() {
+    return this.blocks.width;
+  }
+
+  get height() {
+    return this.blocks.height;
+  }
+
+  get length() {
+    return this.blocks.length;
+  }
+
   get timeCreated() {
     return this.nbtData['Metadata']['TimeCreated'];
   }
 
   get timeModified() {
     return this.nbtData['Metadata']['TimeModified'];
-  }
-
-  get regionPosition() {
-    return this.nbtData['Regions'][this.regionName]['Position'];
   }
 }
 
@@ -173,8 +233,7 @@ export class SchematicReader {
 export class SchematicWriter {
   nbt = new Nbt(SCHEMATIC_SHAPE);
   description = '';
-  palette: { [blockState: string]: number } = { 'minecraft:air': 0 };
-  paletteList = ['minecraft:air'];
+  paletteManager = new PaletteManager();
   canvas = new Virtual3DCanvas();
   version = 5;
   minecraftDataVersion = 2730;
@@ -187,12 +246,7 @@ export class SchematicWriter {
    * adding it to the palette if necessary.
    */
   getOrCreatePaletteIndex(blockState: string) {
-    if (this.palette[blockState] !== undefined) {
-      return this.palette[blockState];
-    }
-    this.paletteList.push(blockState);
-    this.palette[blockState] = this.paletteList.length - 1;
-    return this.palette[blockState];
+    return this.paletteManager.getOrCreatePaletteIndex(blockState);
   }
 
   /**
@@ -206,13 +260,12 @@ export class SchematicWriter {
    * Gets the block state at (x, y, z)
    */
   getBlock(x: number, y: number, z: number): string {
-    return this.paletteList[this.canvas.get(x, y, z)];
+    return this.paletteManager.getBlockState(this.canvas.get(x, y, z));
   }
 
   asNbtData(): ShapeToInterface<typeof SCHEMATIC_SHAPE> {
     const [blocks, nonAirBlocks] = this.canvas.getAllBlocks();
-    const extents = this.canvas.extents;
-    const bits = bitsForBlockStates(this.paletteList.length);
+    const bits = this.paletteManager.bits();
     const uint64sRequired = Math.ceil(blocks.length * bits / 64);
     const blockStates = new DataView(new ArrayBuffer(uint64sRequired * 8));
 
@@ -259,12 +312,12 @@ export class SchematicWriter {
       },
       'Regions': {
         [this.name]: {
-          'BlockStatePalette': this.paletteList.map(parseBlockState),
+          'BlockStatePalette': this.paletteManager.toNbt(),
           'BlockStates': blockStates,
           'Position': {
-            'x': extents.minx,
-            'y': extents.miny,
-            'z': extents.minz
+            'x': this.canvas.minx,
+            'y': this.canvas.miny,
+            'z': this.canvas.minz
           },
           'Size': {
             'x': this.canvas.width,

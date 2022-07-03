@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Block, BlockClass, spin, texturedCube } from "./block";
-import * as textures from '../../textures/index';
+import * as textures from '../textures/index';
 import { checkExhaustive } from "../util";
 
 @BlockClass

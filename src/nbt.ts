@@ -11,7 +11,7 @@
 import { checkExhaustive } from "./util";
 
 /** The possible Nbt tags. */
-export const enum Tags {
+const enum Tags {
   End = 0,
   Byte = 1,
   Short = 2,
@@ -61,7 +61,7 @@ export interface SimpleShapeToInterface {
   long: bigint;
   float: number;
   double: number;
-  // Use a DataView for the int arrays so that the values
+  // Use a DataView for the int arrays so that
   // we can just provide a view into the decompressed binary,
   // so that we don't need to make a copy. We can't use
   // a TypedArray because the data is big endian, and TypedArrays
@@ -180,14 +180,14 @@ class DataViewWriter {
   }
 
   string(s: string) {
-    const encoded = encodeUtf8(s);
-    this.assertCapacity(encoded.byteLength + 2);
-    this.data.setUint16(this.i, encoded.byteLength);
-    this.i += 2;
-    for (let i = 0; i < encoded.byteLength; i++) {
-      this.data.setUint8(this.i + i, encoded[i]);
-    }
-    this.i += encoded.byteLength;
+    // 1 utf-16 character or unpaired surrogate may
+    // become up to 3 bytes of utf-8. Reserve enough space
+    this.assertCapacity(s.length * 3);
+    const { written } =
+      encoder.encodeInto(s, new Uint8Array(this.data.buffer, this.i + 2));
+    assert(written != null, 'written is undefined');
+    this.data.setUint16(this.i, written!);
+    this.i += written! + 2;
   }
 
   array(array: DataView, width: number) {
@@ -196,10 +196,10 @@ class DataViewWriter {
     this.data.setInt32(this.i, nItems);
     this.i += 4;
     // we can just copy byte-by-byte, since both buffers
-    // are big-endian.
-    for (let i = 0; i < array.byteLength; i++) {
-      this.data.setUint8(this.i + i, array.getUint8(i));
-    }
+    // are big-endian. Use Uint8Arrays to represent the ranges.
+    new Uint8Array(this.data.buffer, this.i, array.byteLength)
+      .set(new Uint8Array(array.buffer, array.byteOffset, array.byteLength));
+
     this.i += array.byteLength;
   }
 
@@ -219,9 +219,7 @@ class DataViewWriter {
         newSize *= 2;
       }
       const newData = new DataView(new ArrayBuffer(newSize));
-      for (let i = 0; i < this.data.byteLength; i++) {
-        newData.setInt8(i, this.data.getInt8(i));
-      }
+      new Uint8Array(newData.buffer).set(new Uint8Array(this.data.buffer));
       this.data = newData;
     }
   }
@@ -329,7 +327,8 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
 
   private parseRoot(data: DataViewReader): ShapeToInterface<S> {
     assert(data.byte() === Tags.Compound, 'Expected a compound at root');
-    assert(data.string() === '', 'Expected an empty name at root');
+    data.string();
+    // assert(data.string() === '', 'Expected an empty name at root');
     return this.parsePayload(data, Tags.Compound, this.shape, 'root') as ShapeToInterface<S>;
   }
 
@@ -472,11 +471,11 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
   }
 
   private assertCompoundShape(shape: NbtShape, path: string): asserts shape is { [key: string]: NbtShape } | '*' {
-    assert(shape === '*' || !Array.isArray(shape) && typeof shape === 'object', `Found a compound, but expected ${shape}.`, path);
+    assert(shape === '*' || !Array.isArray(shape) && typeof shape === 'object', `Found ${shape}, but expected a compound.`, path);
   }
 
   private assertListShape(shape: NbtShape, path: string): asserts shape is [NbtShape] | '*' {
-    assert(shape === '*' || Array.isArray(shape), `Found a list, but expected ${shape}`, path);
+    assert(shape === '*' || Array.isArray(shape), `Found ${shape}, but expected a list`, path);
   }
 
   private serializeRoot(value: unknown, shape: NbtShape): DataView {

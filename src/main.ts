@@ -104,11 +104,7 @@ previewSelector.addEventListener('change', async () => {
       for (let x = 0; x < schematic.width; x++) {
         const block = schematic.getBlock(x, y, z);
         const name = parseBlockState(block);
-        if (['minecraft:smooth_basalt', 'minecraft:calcite', 'minecraft:amethyst_block',
-          'minecraft:budding_amethyst', 'minecraft:amethyst_cluster', 'minecraft:large_amethyst_bud',
-          'minecraft:medium_amethyst_bud', 'minecraft:small_amethyst_bud'].indexOf(name['Name']) > -1) {
-          renderer.setBlockState(x, y, z, block);
-        }
+        renderer.setBlockState(x, y, z, block);
       }
     }
   }

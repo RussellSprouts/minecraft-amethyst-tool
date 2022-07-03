@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Block, BlockClass, spriteSheet, texturedCube } from "./block";
-import * as textures from '../../textures/index';
+import * as textures from '../textures/index';
 
 type RedstoneSide = 'none' | 'side' | 'up';
 

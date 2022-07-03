@@ -1,6 +1,6 @@
 
 import { Block, BlockClass, spriteSheet, texturedCube } from "./block";
-import * as textures from '../../textures/index';
+import * as textures from '../textures/index';
 import * as THREE from 'three';
 
 @BlockClass

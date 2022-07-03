@@ -93,7 +93,7 @@ export function runInWorker<A extends any[], R extends Promise<any>>(
         nextId++;
       }) as R,
       progress
-    }
+    };
   };
   result.original = fn;
   result.event = event;

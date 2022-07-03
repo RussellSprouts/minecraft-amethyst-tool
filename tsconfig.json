@@ -1,4 +1,14 @@
 {
+    "ts-node": {
+        "files": true,
+        "require": ["tsconfig-paths/register"],
+        "compilerOptions": {
+            "baseUrl": ".",
+            "strict": false,
+            "target": "ES2015",
+            "module": "CommonJS"
+        }
+    },
     "compilerOptions": {
         "lib": [
             "ES2020",
@@ -11,7 +21,11 @@
         "sourceMap": true,
         "noPropertyAccessFromIndexSignature": true,
         "experimentalDecorators": true,
-        "allowSyntheticDefaultImports": true
+        "allowSyntheticDefaultImports": true,
+        "isolatedModules": true,
+        "paths": {
+            "pako": ["./third_party/pako/pako.min"]
+        }
     },
     "exclude": [
         "out",

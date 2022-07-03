@@ -1,5 +1,5 @@
 import { Block, BlockClass, singleTexturedCube } from "./block";
-import * as textures from '../../textures/index';
+import * as textures from '../textures/index';
 
 @BlockClass
 export class RedstoneLamp extends Block {

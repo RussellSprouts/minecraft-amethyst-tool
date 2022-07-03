@@ -1,6 +1,6 @@
 import { parseBlockState } from "../litematic";
 import * as THREE from 'three';
-import * as textures from '../../textures/index';
+import * as textures from '../textures/index';
 import { checkExhaustive } from "../util";
 
 const cubeVertices = [

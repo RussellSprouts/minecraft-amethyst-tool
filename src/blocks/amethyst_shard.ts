@@ -1,6 +1,6 @@
 import { Block, BlockClass, DEFAULT_TRANSPARENT, rotate, texturedCube } from "./block";
 import * as THREE from 'three';
-import * as textures from '../../textures/index';
+import * as textures from '../textures/index';
 
 
 @BlockClass

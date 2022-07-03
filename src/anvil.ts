@@ -13,7 +13,7 @@ const enum DataVersions {
   SNAPSHOT_21w43a = 2844,
 }
 
-export const enum HeightMap {
+const enum HeightMap {
   MOTION_BLOCKING = 'MOTION_BLOCKING',
   MOTION_BLOCKING_NO_LEAVES = 'MOTION_BLOCKING_NO_LEAVES',
   OCEAN_FLOOR = 'OCEAN_FLOOR',
@@ -94,12 +94,13 @@ export class AnvilParser {
    */
   private chunkOffset(x: number, z: number) {
     const index = 4 * ((x & 31) + 32 * (z & 31));
-    const length = this.input.getUint8(index + 3);
+    const chunkLocation = this.input.getUint32(index);
+    const length = chunkLocation & 0xFF;
     if (length <= 0) {
       return -1;
     }
 
-    return (this.input.getUint32(index) >> 8) * SECTOR_SIZE;
+    return (chunkLocation >> 8) * SECTOR_SIZE;
   }
 
   /**

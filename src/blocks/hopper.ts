@@ -1,5 +1,5 @@
 import { Block, BlockClass, DEFAULT_ROTATION, singleColorMaterial, spin, Spinnable, texturedCube } from "./block";
-import * as textures from '../../textures/index';
+import * as textures from '../textures/index';
 import * as THREE from "three";
 
 @BlockClass

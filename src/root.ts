@@ -8,3 +8,4 @@
  * contexts, so be careful about side-effects for imports that are
  * included in the worker.
  */
+export { };

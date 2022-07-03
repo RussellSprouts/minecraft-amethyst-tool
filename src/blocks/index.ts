@@ -13,7 +13,7 @@ import { Scaffolding } from './scaffolding';
 import { SlimeBlock } from './slime_block';
 import { StickyPiston } from './sticky_piston';
 import { StoneButton } from './stone_button';
-import * as textures from '../../textures/index';
+import * as textures from '../textures/index';
 import { parseBlockState } from '../litematic';
 
 const cache = new Map<string, Block>();

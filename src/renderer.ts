@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { SchematicWriter } from './litematic';
 import { Point, p, parseP } from './point';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import * as textures from '../textures/index';
+import * as textures from './textures/index';
 import { getBlockInfo } from './blocks/index';
 import { assertInstanceOf } from './util';
 

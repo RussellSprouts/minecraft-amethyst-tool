@@ -13,7 +13,7 @@ export const processRegionFiles = runInWorker(['general'], 'regions',
     await Promise.all(Array.from(fileList).map(async file => {
       const fileContents = await readFile(file);
       const parser = new AnvilParser(new DataView(fileContents.buffer));
-      const allBlocks = await parser.countBlocks('minecraft:calcite');
+      const allBlocks = await parser.countBlocks('minecraft:budding_amethyst');
       console.log('BUDDING', allBlocks.size, allBlocks);
       totalProgress++;
       context.progress(100 * totalProgress / fileList.length);
