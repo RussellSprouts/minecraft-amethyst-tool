@@ -4,7 +4,7 @@ import * as THREE from "three";
 
 @BlockClass
 export class Hopper extends Block {
-  'enabled': boolean = true;
+  'enabled' = true;
   'facing': 'down' | 'east' | 'north' | 'south' | 'west' = 'down';
 
   get _model() {

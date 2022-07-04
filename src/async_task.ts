@@ -1,12 +1,8 @@
 
 export abstract class AsyncTask {
-  constructor() {
-  }
-
-
 }
 
-function send(value: unknown) {
+export function send(value: unknown) {
   let transfers: Transferable[] = [];
   if (value instanceof MessagePort
     || value instanceof ImageBitmap

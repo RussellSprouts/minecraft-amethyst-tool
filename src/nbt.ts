@@ -25,7 +25,7 @@ const enum Tags {
   Compound = 10,
   IntArray = 11,
   LongArray = 12,
-};
+}
 
 interface NbtCompoundShape {
   readonly [key: string]: NbtShape;
@@ -127,8 +127,10 @@ function decodeUtf8(array: DataView, i: number, length: number): string {
  * @param s The string
  * @returns The utf8 encoding as a Uint8Array
  */
-function encodeUtf8(s: string): Uint8Array {
-  return encoder.encode(s);
+function encodeUtf8Into(s: string, array: DataView, i: number): number {
+  const { written } = encoder.encodeInto(s, new Uint8Array(array.buffer, i));
+  if (written == null) { throw new Error(`Encoding string failed: '${s}'`); }
+  return written;
 }
 
 /**
@@ -139,7 +141,7 @@ function encodeUtf8(s: string): Uint8Array {
 class DataViewWriter {
   i = 0;
   data: DataView;
-  constructor(initialCapacity: number = 1024) {
+  constructor(initialCapacity = 1024) {
     this.data = new DataView(new ArrayBuffer(initialCapacity));
   }
 
@@ -183,11 +185,9 @@ class DataViewWriter {
     // 1 utf-16 character or unpaired surrogate may
     // become up to 3 bytes of utf-8. Reserve enough space
     this.assertCapacity(s.length * 3);
-    const { written } =
-      encoder.encodeInto(s, new Uint8Array(this.data.buffer, this.i + 2));
-    assert(written != null, 'written is undefined');
-    this.data.setUint16(this.i, written!);
-    this.i += written! + 2;
+    const written = encodeUtf8Into(s, this.data, this.i + 2);
+    this.data.setUint16(this.i, written);
+    this.i += written + 2;
   }
 
   array(array: DataView, width: number) {

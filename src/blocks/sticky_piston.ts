@@ -3,7 +3,7 @@ import * as textures from '../textures/index';
 
 @BlockClass
 export class StickyPiston extends Block {
-  'extended': boolean = false;
+  'extended' = false;
   'facing': 'up' | 'down' | 'east' | 'north' | 'south' | 'west' = 'north';
 
   get _model() {

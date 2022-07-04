@@ -1,5 +1,6 @@
 
 import { expandLongPackedArray } from "../long_packed_array";
+import { assertNotNull } from "../util";
 
 describe('Long packed array', () => {
   it('should expand values', () => {
@@ -83,7 +84,7 @@ function bitsToArray(bits: string): DataView {
     throw new Error(`Bad length ${bits.length}`);
   }
 
-  const bytes = bits.match(/(........)/g)!;
+  const bytes = assertNotNull(bits.match(/(........)/g));
 
   return new DataView(
     new Uint8Array(bytes.map(byte => parseInt(byte, 2))).buffer);

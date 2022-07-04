@@ -9,6 +9,7 @@ const expected_ticks_for_one_stage = avg_ticks_between_random_ticks /
 
 console.log(expected_ticks_for_one_stage, "EXPECTED");
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function calculateOptimalTime() {
   let bestTime = 0;
   let bestExpected = 0;
@@ -28,6 +29,7 @@ function calculateOptimalTime() {
 
 export const optimal_time = 199937; // about 167 minutes, calculated using calculateOptimalTime
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function calculateExpectedShardsPerBlockPerHour() {
   const shards_dropped_when_broken = 2;
   const expected_shards_per_harvest_per_face =

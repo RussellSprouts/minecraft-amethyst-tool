@@ -1,4 +1,3 @@
-import { parseBlockState } from "../litematic";
 import * as THREE from 'three';
 import * as textures from '../textures/index';
 import { checkExhaustive } from "../util";
@@ -136,8 +135,8 @@ export function texturedCube(
     const endPxY = face * 17 + textureHeight;
     const uvStartY = 1 - (endPxY / textureMapHeight);
     const uvEndY = 1 - (startPxY / textureMapHeight);
-    newUvs[i] = newUvs[i] ? uvEndX : uvStartX; // x
-    newUvs[i + 1] = newUvs[i + 1] ? uvEndY : uvStartY; // y
+    newUvs[i] = newUvs[i] !== 0 ? uvEndX : uvStartX; // x
+    newUvs[i + 1] = newUvs[i + 1] !== 0 ? uvEndY : uvStartY; // y
   }
 
   geometry.setAttribute('uv',
@@ -181,7 +180,7 @@ const DEFAULT_MODEL = singleTexturedCube(textures.missing);
 export class Block {
   get _model(): THREE.BufferGeometry {
     return DEFAULT_MODEL;
-  };
+  }
 
   get _texture(): THREE.Material | THREE.Material[] {
     return DEFAULT_TEXTURE;
@@ -189,9 +188,6 @@ export class Block {
 
   get _rotation(): THREE.Euler {
     return DEFAULT_ROTATION;
-  }
-
-  constructor(data: BlockData) {
   }
 }
 

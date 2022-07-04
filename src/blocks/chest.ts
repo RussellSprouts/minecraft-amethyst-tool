@@ -7,7 +7,7 @@ import { checkExhaustive } from "../util";
 export class Chest extends Block {
   'facing': 'east' | 'north' | 'south' | 'west' = 'north';
   'type': 'single' | 'left' | 'right' = 'single';
-  'waterlogged': boolean = false;
+  'waterlogged' = false;
 
   get _model(): THREE.BufferGeometry {
     const type = this['type'];

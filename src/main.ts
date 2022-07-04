@@ -1,11 +1,11 @@
-import { SchematicReader, IntRange, parseBlockState } from "./litematic";
+import { SchematicReader, IntRange } from "./litematic";
 import { Point, p, parseP } from './point';
 import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 import { expected_shards_per_hour_per_face } from './optimization';
 import { AnvilParser } from './anvil';
 import { Nbt } from "./nbt";
-import { assertInstanceOf } from "./util";
+import { assertInstanceOf, assertNotNull } from "./util";
 import { decompress } from "./compression";
 import { loadEmbeddedSchematics } from "./embedded_schematics";
 import { createNamedWorker } from "./run_in_worker";
@@ -63,7 +63,7 @@ regionSelector.addEventListener('change', async () => {
   }
 
   const renderer = new Renderer('#c');
-  const blockReadout = document.getElementById('block-readout')!;
+  const blockReadout = assertNotNull(document.getElementById('block-readout'));
   renderer.addEventListener('hover', (e) => {
     blockReadout.textContent = (e as CustomEvent).detail.blockState;
   });
@@ -93,7 +93,7 @@ previewSelector.addEventListener('change', async () => {
   const schematic = new SchematicReader(unpacked);
   const renderer = new Renderer('#c');
 
-  const blockReadout = document.getElementById('block-readout')!;
+  const blockReadout = assertNotNull(document.getElementById('block-readout'));
   renderer.addEventListener('hover', (e) => {
     blockReadout.textContent = (e as CustomEvent).detail.blockState;
   });
@@ -103,13 +103,12 @@ previewSelector.addEventListener('change', async () => {
     for (let z = 0; z < schematic.length; z++) {
       for (let x = 0; x < schematic.width; x++) {
         const block = schematic.getBlock(x, y, z);
-        const name = parseBlockState(block);
         renderer.setBlockState(x, y, z, block);
       }
     }
   }
 
-  document.getElementById('save')!.onclick = async () => {
+  assertNotNull(document.getElementById('save')).onclick = async () => {
     saveFile(await renderer.toSchematic().save(), 'geode-farm-export.litematic');
   };
 });
@@ -160,7 +159,7 @@ afkSpot.addEventListener('change', async () => {
   const fileList = Array.from(afkSpot.files ?? []);
   function log(...values: unknown[]) {
     console.log(...values);
-    const text = values.map(value => value ? (value as {}).toString() : '');
+    const text = values.map(value => value ? (value as object).toString() : '');
     afkLog.textContent += text.join('\t') + '\n';
   }
 
@@ -263,6 +262,7 @@ nbtPreview.addEventListener('change', async () => {
   try {
     uncompressed = await decompress(contents);
   } catch (e) {
+    // ignore
   }
 
   console.log(new Nbt('*').parse(uncompressed));
@@ -271,7 +271,7 @@ nbtPreview.addEventListener('change', async () => {
 function main(schematic: SchematicReader) {
   const renderer = new Renderer('#c');
 
-  const blockReadout = document.getElementById('block-readout')!;
+  const blockReadout = assertNotNull(document.getElementById('block-readout'));
   renderer.addEventListener('hover', (e) => {
     blockReadout.textContent = (e as CustomEvent).detail.blockState;
   });
@@ -394,7 +394,7 @@ function main(schematic: SchematicReader) {
     let nFilled = 0;
 
     while (toProcess.length && nFilled < nExpand) {
-      const point = toProcess.shift()!;
+      const point = assertNotNull(toProcess.shift());
       if (processed[point]) {
         continue;
       }
@@ -598,7 +598,7 @@ function main(schematic: SchematicReader) {
     p: (a: number, b: number) => Point) {
     const controllers: Record<Point, ButtonController> = {};
     const container = assertInstanceOf(element.querySelector('.grid'), HTMLElement);
-    const machineCountContainer = element.querySelector('.count')!;
+    const machineCountContainer = assertNotNull(element.querySelector('.count'));
 
     class ButtonController {
       n = 0;
@@ -614,7 +614,7 @@ function main(schematic: SchematicReader) {
         this.setNeighbors(false, false, false, false);
       }
 
-      onClick(e: Event) {
+      onClick(_e: Event) {
         this.div.classList.toggle(this.type);
         if (this.type === 'air') {
           this.type = 'extra-slime';
@@ -665,8 +665,8 @@ function main(schematic: SchematicReader) {
       }
     }
 
-    container.style.height = `${(max_bud_a - min_bud_a + 3) * 32}px`
-    container.style.width = `${(max_bud_b - min_bud_b + 3) * 32}px`
+    container.style.height = `${(max_bud_a - min_bud_a + 3) * 32}px`;
+    container.style.width = `${(max_bud_b - min_bud_b + 3) * 32}px`;
     for (const a of new IntRange(min_bud_a, max_bud_a + 1).expand(1).reverse()) {
       for (const b of new IntRange(min_bud_b, max_bud_b + 1).expand(1)) {
         const div = document.createElement('div');
@@ -842,7 +842,7 @@ function main(schematic: SchematicReader) {
   // 2. For each possible position of a flying machine, expand outward by converting
   //    blocks to slime until you reach push limit.
 
-  document.getElementById('save')!.onclick = async () => {
+  assertNotNull(document.getElementById('save')).onclick = async () => {
     saveFile(await renderer.toSchematic().save(), 'geode-farm-export.litematic');
   };
 

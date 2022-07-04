@@ -17,7 +17,7 @@ export function registerWorkerListener(worker: Worker) {
     if (e.data.event === 'progress') {
       const handler = progressHandlers.get(e.data.id);
       if (!handler) {
-        throw new Error(`Missing progressHandler for ${e.data.event}:${e.data.id}`)
+        throw new Error(`Missing progressHandler for ${e.data.event}:${e.data.id}`);
       }
       handler(e.data.value);
     } else {
@@ -68,7 +68,7 @@ export function runInWorker<A extends any[], R extends Promise<any>>(
   fn: (context: WorkerContext, ...args: A) => R
 ): WrappedFunction<R, A> {
   const result: WrappedFunction<R, A> = (...args: A) => {
-    let progress = new EventTarget();
+    const progress = new EventTarget();
     return {
       promise: new Promise((resolve) => {
         resolvers.set(nextId, resolve);

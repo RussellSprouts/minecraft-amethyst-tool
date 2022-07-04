@@ -119,6 +119,9 @@ export class AnvilParser {
         if (startIndex < 0) { continue; }
         const dataLength = this.input.getUint32(startIndex);
         const compressionType = this.input.getUint8(startIndex + 4);
+        if (compressionType !== 2) {
+          console.warn("Unexpected compression type", compressionType);
+        }
         const compressedData = new Uint8Array(this.input.buffer, startIndex + 5, dataLength - 1);
         const uncompressed = await decompress(compressedData);
         const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
@@ -144,7 +147,7 @@ export class AnvilParser {
 
   async parseChunk(x: number, z: number): Promise<ChunkData | undefined> {
     const index = `${x}:${z}`;
-    if (this.parsedChunks[index]) {
+    if (this.parsedChunks[index] != null) {
       return this.parsedChunks[index];
     }
 
@@ -152,6 +155,9 @@ export class AnvilParser {
     if (startIndex !== -1) {
       const dataLength = this.input.getUint32(startIndex);
       const compressionType = this.input.getUint8(startIndex + 4);
+      if (compressionType !== 2) {
+        console.warn("Unexpected compression type", compressionType);
+      }
       const compressedData = new Uint8Array(this.input.buffer, startIndex + 5, dataLength - 1);
       const uncompressed = await decompress(compressedData);
       const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
@@ -243,7 +249,7 @@ class ChunkData {
 
   getHeightMap(map: HeightMap, x: number, z: number) {
     const heightMap = this.data['Heightmaps']?.[map] ?? this.data['Level']?.['Heightmaps']?.[map];
-    if (heightMap) {
+    if (heightMap != null) {
       const blockIndex = x + z * 16;
       return readLongPackedArray(heightMap, 9, blockIndex, this.dataVersion < DataVersions.SNAPSHOT_20w17a);
     }
@@ -253,7 +259,7 @@ class ChunkData {
   getBlockState(x: number, y: number, z: number): string {
     const sectionIndex = Math.floor(y / 16);
     const section = this.sectionsByY[sectionIndex];
-    if (section) {
+    if (section != null) {
       return section.getBlockState(x, y, z);
     }
     return 'minecraft:air';

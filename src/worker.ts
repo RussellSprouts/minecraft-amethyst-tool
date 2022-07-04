@@ -19,7 +19,7 @@ console.log('I am the worker!');
 
 registerFunction(processRegionFiles);
 
-let workerName: string = '';
+let workerName = '';
 const workers = new Map<string, MessagePort>();
 async function handleMessage(e: MessageEvent) {
   console.log('handling remote call', e.data, typeof importScripts);

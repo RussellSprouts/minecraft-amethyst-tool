@@ -41,7 +41,7 @@ export class Virtual3DCanvas {
     z = ((z % SEGMENT_SIZE) + SEGMENT_SIZE) % SEGMENT_SIZE;
 
     const segmentPoint = p(sx, sy, sz);
-    if (!this.segments[segmentPoint]) {
+    if (this.segments[segmentPoint] == null) {
       return 0;
     }
 
@@ -80,7 +80,7 @@ export class Virtual3DCanvas {
     z = ((z % SEGMENT_SIZE) + SEGMENT_SIZE) % SEGMENT_SIZE;
 
     const segmentPoint = p(sx, sy, sz);
-    if (!this.segments[segmentPoint]) {
+    if (this.segments[segmentPoint] == null) {
       // create a new segment if needed
       this.segments[segmentPoint] = value > 0xFF
         ? new Uint16Array(SEGMENT_SIZE * SEGMENT_SIZE * SEGMENT_SIZE)

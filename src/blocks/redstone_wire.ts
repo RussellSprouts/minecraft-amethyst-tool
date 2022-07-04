@@ -27,7 +27,7 @@ const REDSTONE_BOTTOM_TEXTURE: Record<string, number> = {
 export class RedstoneWire extends Block {
   'east': RedstoneSide = 'none';
   'north': RedstoneSide = 'none';
-  'power': number = 0;
+  'power' = 0;
   'south': RedstoneSide = 'none';
   'west': RedstoneSide = 'none';
 
@@ -52,7 +52,7 @@ export class RedstoneWire extends Block {
       ] + poweredOffset,
       16, 16, 16, 0, 0, 0,
       0.01 // offset a tiny bit to prevent texture fighting
-    )
+    );
   }
 
   get _texture(): THREE.Material | THREE.Material[] {

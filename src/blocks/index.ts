@@ -74,8 +74,9 @@ const constructors: Record<string, { new(data: BlockData): Block }> = {
 };
 
 export function getBlockInfo(key: string): Block {
-  if (cache.has(key)) {
-    return cache.get(key)!;
+  const cached = cache.get(key);
+  if (cached != null) {
+    return cached;
   }
   const data = parseBlockState(key);
   const name = data['Name'];

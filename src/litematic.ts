@@ -42,7 +42,7 @@ const BLOCK_STATE_SHAPE = REGION_SHAPE['BlockStatePalette'][0];
  * a string like "minecraft:observer[facing=east]".
  */
 export function blockState(state: ShapeToInterface<typeof BLOCK_STATE_SHAPE>): string {
-  if (state['Properties'] && Object.keys(state['Properties']).length) {
+  if (state['Properties'] != null && Object.keys(state['Properties']).length) {
     return `${state['Name']}[${Object.keys(state['Properties'])
       .sort()
       .map(prop => `${prop}=${state['Properties'][prop]}`)
@@ -56,7 +56,7 @@ export function blockState(state: ShapeToInterface<typeof BLOCK_STATE_SHAPE>): s
  * {Name: "minecraft:observer", Properties: {facing: "east"}}.
  */
 export function parseBlockState(state: string): ShapeToInterface<typeof BLOCK_STATE_SHAPE> {
-  let [name, props] = state.split('[');
+  const [name, props] = state.split('[');
   const properties: Record<string, string> = {};
   if (props) {
     for (const kv of props.slice(0, -1).split(',')) {

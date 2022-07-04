@@ -1,6 +1,6 @@
 import { Renderer } from './renderer';
 import { SchematicReader } from './litematic';
-import { assertInstanceOf } from './util';
+import { assertInstanceOf, assertNotNull } from './util';
 import { parseP, Point } from './point';
 import { decompress } from './compression';
 
@@ -10,7 +10,7 @@ export async function loadEmbeddedSchematics() {
   const elements = document.querySelectorAll('object[type="application/vnd.litematica+nbt"]') as NodeListOf<HTMLObjectElement>;
   const fetchData = await Promise.all(Array.from(elements).map(async embed => {
     const url = embed.getAttribute('data');
-    if (!url) { throw new Error('embedded litematic must have a [data] attribute.'); }
+    if (url == null) { throw new Error('embedded litematic must have a [data] attribute.'); }
     const response = await fetch(url);
     if (!response.ok) {
       return { embed, data: null };
@@ -44,7 +44,7 @@ export async function loadEmbeddedSchematics() {
 
       const cameraCoords = embed.dataset['camera'];
       const targetCoords = embed.dataset['target'];
-      if (cameraCoords && targetCoords) {
+      if (cameraCoords != null && targetCoords != null) {
         const camera = parseP(cameraCoords as Point);
         const target = parseP(targetCoords as Point);
         renderer.camera.position.set(camera[0], camera[1], camera[2]);
@@ -57,9 +57,9 @@ export async function loadEmbeddedSchematics() {
 
   for (const revealer of document.querySelectorAll('.revealer') as Iterable<HTMLInputElement>) {
     const updateSchematic = () => {
-      const forId = revealer.getAttribute('for')!;
-      const forElement = document.getElementById(forId)!;
-      const { renderer, schematic } = embeddedSchematics.get(forElement)!;
+      const forId = assertNotNull(revealer.getAttribute('for'));
+      const forElement = assertNotNull(document.getElementById(forId));
+      const { renderer, schematic } = assertNotNull(embeddedSchematics.get(forElement));
       const fraction = 1 - Number(revealer.value) / 100;
       const targetHeight = Math.round(schematic.height * fraction);
       console.log(targetHeight);

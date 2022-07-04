@@ -11,7 +11,7 @@ export class MapRenderer {
   private tileMap: Record<string, Uint16Array> = {};
 
   constructor(query: string) {
-    this.canvas = document.querySelector(query)!;
+    this.canvas = document.querySelector(query) as HTMLCanvasElement;
   }
 
   getTileMap(x: number, z: number) {

@@ -4,7 +4,7 @@ import { Point, p, parseP } from './point';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as textures from './textures/index';
 import { getBlockInfo } from './blocks/index';
-import { assertInstanceOf } from './util';
+import { assertInstanceOf, assertNotNull } from './util';
 
 const spriteSheet = new THREE.TextureLoader().load(textures.image);
 spriteSheet.minFilter = THREE.NearestFilter;
@@ -123,7 +123,7 @@ export class Renderer extends EventTarget {
     const block = getBlockInfo(blockState);
     if (this.allBlockStates[point] !== blockState) {
       this.allBlockStates[point] = blockState;
-      this.allBlocks[point] && this.scene.remove(this.allBlocks[point]!);
+      this.allBlocks[point] && this.scene.remove(assertNotNull(this.allBlocks[point]));
       this.allBlocks[point] = undefined;
       if (blockState !== 'minecraft:air' && blockState !== 'minecraft:cave_air') {
         const newMesh = new THREE.Mesh(block._model, block._texture);
