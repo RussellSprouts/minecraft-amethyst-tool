@@ -8,6 +8,8 @@
  * the NBT data.
  */
 
+import { DataViewReader, DataViewWriter } from "./data_view_stream";
+import { DefaultEndianDataView } from "./default_endian_data_view";
 import { checkExhaustive } from "./util";
 
 /** The possible Nbt tags. */
@@ -105,196 +107,6 @@ function assert(a: boolean, message: string, path?: string): asserts a is true {
   }
 }
 
-const decoder = new TextDecoder("utf-8");
-const encoder = new TextEncoder();
-
-/**
- * Parses utf8 encoded text to a JS string
- * 
- * @param array The data to decode
- * @param i The start index
- * @param length The length
- * @returns a JS string
- */
-function decodeUtf8(array: DataView, i: number, length: number): string {
-  if (length === 0) { return ''; }
-  return decoder.decode(new DataView(array.buffer, i, length));
-}
-
-/**
- * Encodes the given string as utf8.
- * 
- * @param s The string
- * @returns The utf8 encoding as a Uint8Array
- */
-function encodeUtf8Into(s: string, array: DataView, i: number): number {
-  const { written } = encoder.encodeInto(s, new Uint8Array(array.buffer, i));
-  if (written == null) { throw new Error(`Encoding string failed: '${s}'`); }
-  return written;
-}
-
-/**
- * Streams data to a DataView.
- * Each writer method moves the cursor forward,
- * and resizing is automatic.
- */
-class DataViewWriter {
-  i = 0;
-  data: DataView;
-  constructor(initialCapacity = 1024) {
-    this.data = new DataView(new ArrayBuffer(initialCapacity));
-  }
-
-  byte(n: number) {
-    this.assertCapacity(1);
-    this.data.setInt8(this.i, n);
-    this.i++;
-  }
-
-  short(n: number) {
-    this.assertCapacity(2);
-    this.data.setInt16(this.i, n);
-    this.i += 2;
-  }
-
-  int(n: number) {
-    this.assertCapacity(4);
-    this.data.setInt32(this.i, n);
-    this.i += 4;
-  }
-
-  long(n: bigint) {
-    this.assertCapacity(8);
-    this.data.setBigInt64(this.i, n);
-    this.i += 8;
-  }
-
-  float(n: number) {
-    this.assertCapacity(4);
-    this.data.setFloat32(this.i, n);
-    this.i += 4;
-  }
-
-  double(n: number) {
-    this.assertCapacity(8);
-    this.data.setFloat64(this.i, n);
-    this.i += 8;
-  }
-
-  string(s: string) {
-    // 1 utf-16 character or unpaired surrogate may
-    // become up to 3 bytes of utf-8. Reserve enough space
-    this.assertCapacity(s.length * 3);
-    const written = encodeUtf8Into(s, this.data, this.i + 2);
-    this.data.setUint16(this.i, written);
-    this.i += written + 2;
-  }
-
-  array(array: DataView, width: number) {
-    const nItems = Math.floor(array.byteLength / width);
-    this.assertCapacity(array.byteLength + 4);
-    this.data.setInt32(this.i, nItems);
-    this.i += 4;
-    // we can just copy byte-by-byte, since both buffers
-    // are big-endian. Use Uint8Arrays to represent the ranges.
-    new Uint8Array(this.data.buffer, this.i, array.byteLength)
-      .set(new Uint8Array(array.buffer, array.byteOffset, array.byteLength));
-
-    this.i += array.byteLength;
-  }
-
-  final(): DataView {
-    return new DataView(this.data.buffer, 0, this.i);
-  }
-
-  /**
-   * Assures that the internal buffer can hold newBytes extra
-   * bytes, doubling the current buffer size as necessary.
-   * @param newBytes The number of new bytes to add
-   */
-  private assertCapacity(newBytes: number) {
-    if (this.i + newBytes > this.data.byteLength) {
-      let newSize = this.data.byteLength * 2;
-      while (this.i + newBytes > newSize) {
-        newSize *= 2;
-      }
-      const newData = new DataView(new ArrayBuffer(newSize));
-      new Uint8Array(newData.buffer).set(new Uint8Array(this.data.buffer));
-      this.data = newData;
-    }
-  }
-}
-
-/**
- * Streams data from a DataView.
- * Each accessor method moves the cursor forward,
- * consuming the data.
- */
-class DataViewReader {
-  i = 0;
-  constructor(readonly data: DataView) {
-  }
-
-  byte(): number {
-    this.i += 1;
-    return this.data.getInt8(this.i - 1);
-  }
-
-  short(): number {
-    this.i += 2;
-    return this.data.getInt16(this.i - 2);
-  }
-
-  int(): number {
-    this.i += 4;
-    return this.data.getInt32(this.i - 4);
-  }
-
-  long(): bigint {
-    this.i += 8;
-    return this.data.getBigInt64(this.i - 8);
-  }
-
-  string(): string {
-    const length = this.data.getUint16(this.i);
-    this.i += 2;
-    const string = decodeUtf8(this.data, this.i, length);
-    this.i += length;
-    return string;
-  }
-
-  float(): number {
-    this.i += 4;
-    return this.data.getFloat32(this.i - 4);
-  }
-
-  double(): number {
-    this.i += 8;
-    return this.data.getFloat64(this.i - 8);
-  }
-
-  array(width: number): DataView {
-    const length = this.int();
-    const result = new DataView(this.data.buffer, this.i, length * width);
-    this.i += result.byteLength;
-    return result;
-  }
-
-  skip(n: number) {
-    this.i += n;
-  }
-
-  skipString() {
-    const length = this.data.getUint16(this.i);
-    this.i += 2 + length;
-  }
-
-  skipArray(width: number) {
-    const length = this.int();
-    this.i += length * width;
-  }
-}
-
 /**
  * A Nbt parser and serializer for a given shape.
  * Keeping the shape separate from the data allows
@@ -310,8 +122,8 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
    * Parses the data in the Uint8Array into the JS object
    * given by the shape of this Nbt parser.
    */
-  parse(data: Uint8Array): ShapeToInterface<S> {
-    const asView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  parse(data: Uint8Array, littleEndian = false): ShapeToInterface<S> {
+    const asView = new DefaultEndianDataView(littleEndian, data.buffer, data.byteOffset, data.byteLength);
     const reader = new DataViewReader(asView);
     return this.parseRoot(reader);
   }
@@ -328,7 +140,6 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
   private parseRoot(data: DataViewReader): ShapeToInterface<S> {
     assert(data.byte() === Tags.Compound, 'Expected a compound at root');
     data.string();
-    // assert(data.string() === '', 'Expected an empty name at root');
     return this.parsePayload(data, Tags.Compound, this.shape, 'root') as ShapeToInterface<S>;
   }
 

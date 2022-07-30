@@ -1,6 +1,7 @@
 /** Renders a 2d map */
 
 import { p } from "./point";
+import { assertInstanceOf } from "./util";
 
 const CHUNK_SIZE = 32;
 export class MapRenderer {
@@ -11,7 +12,7 @@ export class MapRenderer {
   private tileMap: Record<string, Uint16Array> = {};
 
   constructor(query: string) {
-    this.canvas = document.querySelector(query) as HTMLCanvasElement;
+    this.canvas = assertInstanceOf(document.querySelector(query), HTMLCanvasElement);
   }
 
   getTileMap(x: number, z: number) {
