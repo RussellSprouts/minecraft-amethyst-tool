@@ -148,6 +148,7 @@ afkSpot.addEventListener('change', async () => {
   const chunkAmountsSW: Record<Point, number> = {};
   const chunkAmountsNE: Record<Point, number> = {};
   const chunkAmountsSE: Record<Point, number> = {};
+  const chunkAmountsCorner: Record<Point, number> = {};
 
   let bestChunk = p(0, 0, 0);
   let bestAmount = -1;
@@ -191,8 +192,15 @@ afkSpot.addEventListener('change', async () => {
         for (let xOffset = -8; xOffset <= 8; xOffset++) {
           for (let zOffset = -8; zOffset <= 8; zOffset++) {
             const chunkP = p(chunkX + xOffset, 0, chunkZ + zOffset);
-            let dx = chunkCenterX - (chunkX + xOffset + 0.5 - 0.5 / 16);
-            let dz = chunkCenterZ - (chunkZ + zOffset + 0.5 - 0.5 / 16);
+
+            let dx = xOffset;
+            let dz = zOffset;
+            if (dx * dx + dz * dz < 8 * 8) {
+              recordChunkAmount(chunkAmountsCorner, chunkP, chunksWithGeodes[chunk], '0:0:0');
+            }
+
+            dx = chunkCenterX - (chunkX + xOffset + 0.5 - 0.5 / 16);
+            dz = chunkCenterZ - (chunkZ + zOffset + 0.5 - 0.5 / 16);
             if (dx * dx + dz * dz < 8 * 8) {
               recordChunkAmount(chunkAmountsNW, chunkP, chunksWithGeodes[chunk], '7:0:7');
             }
