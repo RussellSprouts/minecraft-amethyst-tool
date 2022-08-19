@@ -27,7 +27,8 @@
     },
     "compilerFlags": {
         "language_out": "ECMASCRIPT_2020",
-        "create_source_map": "%outname%.map"
+        "create_source_map": "%outname%.map",
+        "emit_use_strict": true
     },
     "prefix": "out/"
 }

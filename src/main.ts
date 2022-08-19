@@ -1,4 +1,5 @@
-import { SchematicReader, IntRange } from "./litematic";
+import { SchematicReader } from "./litematic";
+import { IntRange } from "./int_range";
 import { Point, p, parseP } from './point';
 import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
@@ -50,30 +51,6 @@ fileSelector.addEventListener('change', async () => {
   const unpacked = await decompress(fileContents);
   const schematic = new SchematicReader(unpacked);
   main(schematic);
-});
-
-const regionSelector = assertInstanceOf(document.getElementById('region'), HTMLInputElement);
-regionSelector.addEventListener('change', async () => {
-  const fileList = regionSelector.files;
-  if (!fileList || fileList.length > 1) {
-    throw new Error('One file at a time');
-  } else if (fileList.length === 0) {
-    console.log('No files, doing nothing.');
-    return; // do nothing
-  }
-
-  const renderer = new Renderer('#c');
-  const blockReadout = assertNotNull(document.getElementById('block-readout'));
-  renderer.addEventListener('hover', (e) => {
-    blockReadout.textContent = (e as CustomEvent).detail.blockState;
-  });
-
-  console.log(fileList);
-
-  const fileContents = await readFile(fileList[0]);
-  const parser = new AnvilParser(new DataView(fileContents.buffer));
-
-  parser.parseChunk(0, 0);
 });
 
 const previewSelector = assertInstanceOf(document.getElementById('preview'), HTMLInputElement);
@@ -199,7 +176,7 @@ afkSpot.addEventListener('change', async () => {
 
       const fileContents = await readFile(file);
       const parser = new AnvilParser(new DataView(fileContents.buffer));
-      const chunksWithGeodes = parser.countBlocks('minecraft:budding_amethyst') as any;
+      const chunksWithGeodes = {} as any; // parser.countBlocks('minecraft:budding_amethyst') as any;
       let total = 0;
       const chunks = Object.keys(chunksWithGeodes) as Point[];
       for (const chunk of chunks) {

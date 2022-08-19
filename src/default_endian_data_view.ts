@@ -55,7 +55,7 @@ export class DefaultEndianDataView extends DataView {
     super.setBigUint64(byteOffset, value, littleEndian);
   }
 
-  subarray(byteOffset: number, length: number): DefaultEndianDataView {
+  subview(byteOffset: number, length: number): DefaultEndianDataView {
     return new DefaultEndianDataView(
       this.littleEndian,
       this.buffer,

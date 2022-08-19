@@ -1,8 +1,9 @@
-import { decompress } from './compression';
+import { compress, decompress } from './compression';
+import { blockData, palette } from './gen_test';
 import { blockState } from './litematic';
 import { expandLongPackedArray, readLongPackedArray } from './long_packed_array';
 import { Nbt, ShapeToInterface } from './nbt';
-import { p } from './point';
+import { base64 } from './util';
 
 const enum DataVersions {
   // First snapshot that leaves extra bits at the end of blockState arrays
@@ -24,37 +25,28 @@ const enum HeightMap {
 
 const SECTOR_SIZE = 4096;
 
-/**
- * A collection of Region files.
- */
-export class RegionCollection {
-  filesByName = new Map<string, File>();
+function writeRegionFile(chunk: DataView) {
+  const requiredSectors = Math.ceil((chunk.byteLength + 5) / SECTOR_SIZE);
+  const result = new DataView(new ArrayBuffer(SECTOR_SIZE * (2 + requiredSectors)));
 
-  constructor(public readonly files: Iterable<File>) {
-    for (const file of files) {
-      this.filesByName.set(file.name, file);
-    }
+  const offset = 2;
+
+  console.log('BYTE LENGTH', chunk.byteLength);
+  console.log('REQUIRED SECTORS', requiredSectors);
+  console.log('OFFSET', offset);
+  result.setUint32(0, (offset << 8) | requiredSectors);
+
+  const now = Math.floor(Date.now() / 1000);
+  result.setUint32(SECTOR_SIZE, now);
+
+  result.setUint32(offset * SECTOR_SIZE, chunk.byteLength + 1);
+  // compression type
+  result.setUint8(offset * SECTOR_SIZE + 4, 2);
+  for (let i = 0; i < chunk.byteLength; i++) {
+    result.setUint8(offset * SECTOR_SIZE + 5 + i, chunk.getUint8(i));
   }
 
-  async getBlockState(x: number, y: number, z: number): Promise<string> {
-    const regionX = Math.floor(x / 512);
-    const regionZ = Math.floor(z / 512);
-    console.log('REGION:', regionX, regionZ);
-    const region = this.filesByName.get(`r.${regionX}.${regionZ}.mca`);
-
-    if (region) {
-      const parser = new AnvilParser(new DataView(await region.arrayBuffer()));
-      const chunkX = (Math.floor(x / 16) % 32 + 32) % 32;
-      const chunkZ = (Math.floor(z / 16) % 32 + 32) % 32;
-      console.log('CHUNK:', chunkX, chunkZ);
-      const chunk = await parser.parseChunk(chunkX, chunkZ);
-      if (chunk) {
-        return chunk.getBlockState(x, y, z);
-      }
-    }
-
-    return 'minecraft:air';
-  }
+  return result;
 }
 
 /**
@@ -103,16 +95,11 @@ export class AnvilParser {
     return (chunkLocation >> 8) * SECTOR_SIZE;
   }
 
-  /**
-   * Counts all of the blocks of the specified type.
-   * Returns a map of chunk coordinate to number of blocks.
-   */
-  async countBlocks(state: string): Promise<Set<string>> {
+  async *chunks(): AsyncIterable<ChunkData> {
     if (this.input.byteLength === 0) {
-      return new Set();
+      return;
     }
 
-    const result = new Set<string>();
     for (let x = 0; x < 32; x++) {
       for (let z = 0; z < 32; z++) {
         const startIndex = this.chunkOffset(x, z);
@@ -126,49 +113,27 @@ export class AnvilParser {
         const uncompressed = await decompress(compressedData);
         const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
         const data = nbtParser.parse(uncompressed);
-        const chunk = new ChunkData(data);
-        for (const section of chunk.sections) {
-          if (section.palette.indexOf(state) !== -1) {
-            for (let y = 0; y < 16; y++) {
-              for (let z = 0; z < 16; z++) {
-                for (let x = 0; x < 16; x++) {
-                  if (section.getBlockState(x, y, z) === state) {
-                    result.add(p(chunk.xPos * 16 + x, section.y * 16 + y, chunk.zPos * 16 + z));
-                  }
-                }
-              }
-            }
-          }
+        if (data['Level']['xPos'] === 0 && data['Level']['zPos'] === 0) {
+          console.log(new Nbt('*').parse(uncompressed));
+          const data = new Nbt(CHUNK_1_13).parse(uncompressed);
+          (data as any)['Level']['TileEntities'] = [];
+          (data as any)['Level']['Sections'][1]['BlockStates'] = blockData;
+          (data as any)['Level']['Sections'][1]['Palette'] = palette;
+          console.log(blockData, palette);
+          const compressedChunk = await compress(new Nbt(CHUNK_1_13).serialize(data));
+          // const compressedChunk = compressedData;
+          const newRegion = writeRegionFile(new DataView(compressedChunk.buffer, compressedChunk.byteOffset, compressedChunk.byteLength));
+          console.log(base64(new Uint8Array(newRegion.buffer, newRegion.byteOffset, newRegion.byteLength)));
         }
+        yield new ChunkData(data);
       }
     }
-    return result;
   }
 
-  async parseChunk(x: number, z: number): Promise<ChunkData | undefined> {
-    const index = `${x}:${z}`;
-    if (this.parsedChunks[index] != null) {
-      return this.parsedChunks[index];
+  async *sections(): AsyncIterable<ChunkSection> {
+    for await (const chunk of this.chunks()) {
+      yield* chunk.sections;
     }
-
-    const startIndex = this.chunkOffset(x, z);
-    if (startIndex !== -1) {
-      const dataLength = this.input.getUint32(startIndex);
-      const compressionType = this.input.getUint8(startIndex + 4);
-      if (compressionType !== 2) {
-        console.warn("Unexpected compression type", compressionType);
-      }
-      const compressedData = new Uint8Array(this.input.buffer, startIndex + 5, dataLength - 1);
-      const uncompressed = await decompress(compressedData);
-      const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
-
-      const data = nbtParser.parse(uncompressed);
-      const chunk = new ChunkData(data);
-      this.parsedChunks[index] = chunk;
-      return chunk;
-    }
-
-    return undefined;
   }
 }
 
@@ -220,13 +185,51 @@ const CHUNK_FORMAT_SHAPE = {
   },
 } as const;
 
+const CHUNK_1_13 = {
+  'DataVersion': 'int',
+  'Level': {
+    'Biomes': 'intArray',
+    'Entities': ['*'],
+    'HeightMaps': { '*': 'intArray' },
+    'InhabitedTime': 'long',
+    'LastUpdate': 'long',
+    'LiquidTicks': ['*'],
+    'LiquidsToBeTicked': [['*']],
+    'PostProcessing': [['*']],
+    'Sections': [{
+      'BlockLight': 'byteArray',
+      'BlockStates': 'longArray',
+      'Palette': [{
+        'Name': 'string',
+        'Properties': { '*': 'string' },
+        'SkyLight': 'intArray',
+        'Y': 'int'
+      }]
+    }],
+    'Status': 'string',
+    'Structures': {
+      'References': {
+        'EndCity': 'longArray',
+        'Fortress': 'longArray',
+        'Stronghold': 'longArray',
+      },
+      'Starts': {}
+    },
+    'TileEntities': ['*'],
+    'TileTicks': [{}],
+    'ToBeTicked': [['*']],
+    'xPos': 'int',
+    'yPos': 'int'
+  }
+} as const;
+
 type Section = ShapeToInterface<typeof MINECRAFT_SECTION>;
 
 class ChunkData {
   constructor(readonly data: ShapeToInterface<typeof CHUNK_FORMAT_SHAPE>) {
     const sectionsData = this.data?.['sections'] ?? this.data?.['Level']?.['Sections'] ?? [];
     this.sections = sectionsData.map(section => {
-      const result = new ChunkSection(this.dataVersion, section);
+      const result = new ChunkSection(this, this.dataVersion, section);
       this.sectionsByY[result.y] = result;
       return result;
     });
@@ -267,7 +270,7 @@ class ChunkData {
 }
 
 class ChunkSection {
-  constructor(readonly dataVersion: number, section: Section) {
+  constructor(readonly chunk: ChunkData, readonly dataVersion: number, section: Section) {
     const paletteEntries = section['block_states']?.['palette']
       ?? section['Palette']
       ?? [{ 'Name': 'minecraft:air', 'Properties': {} }];

@@ -9,6 +9,9 @@
     "watch": "nodemon -e ts -x npm run build & nodemon -e aseprite -x npm run textures",
     "textures": "node src/textures/generate.js src/textures/index.ts src/textures/textures.json src/textures/all.png src/textures/textures.aseprite"
   },
+  "engines": {
+    "node": ">=16.16.0"
+  },
   "author": "",
   "license": "ISC",
   "devDependencies": {

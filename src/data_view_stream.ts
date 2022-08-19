@@ -13,7 +13,7 @@ const encoder = new TextEncoder();
  */
 export function decodeUtf8(array: DataView, i: number, length: number): string {
   if (length === 0) { return ''; }
-  return decoder.decode(new DataView(array.buffer, i, length));
+  return decoder.decode(new DataView(array.buffer, array.byteOffset + i, length));
 }
 
 /**
@@ -23,7 +23,7 @@ export function decodeUtf8(array: DataView, i: number, length: number): string {
  * @returns The utf8 encoding as a Uint8Array
  */
 export function encodeUtf8Into(s: string, array: DataView, i: number): number {
-  const { written } = encoder.encodeInto(s, new Uint8Array(array.buffer, i));
+  const { written } = encoder.encodeInto(s, new Uint8Array(array.buffer, array.byteOffset + i));
   if (written == null) { throw new Error(`Encoding string failed: '${s}'`); }
   return written;
 }
@@ -127,7 +127,7 @@ export class DataViewWriter {
   }
 
   final(): DefaultEndianDataView {
-    return this.data.subarray(0, this.i);
+    return this.data.subview(0, this.i);
   }
 
   /**
@@ -198,7 +198,7 @@ export class DataViewReader {
 
   array(width: number): DataView {
     const length = this.int();
-    const result = this.data.subarray(this.i, length * width);
+    const result = this.data.subview(this.i, length * width);
     this.i += result.byteLength;
     return result;
   }

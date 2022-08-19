@@ -55,3 +55,11 @@ export function parallelMap<T, R>(array: T[], options: ParallelMapOptions, mappe
     startWorking();
   });
 }
+
+export function base64(array: Uint8Array) {
+  let binaryString = '';
+  for (const i of array) {
+    binaryString += String.fromCharCode(i);
+  }
+  return btoa(binaryString);
+}
