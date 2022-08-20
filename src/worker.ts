@@ -2,6 +2,7 @@
  * The entry point for the Web Worker. The root module
  */
 
+import { getBuddingAmethystPerChunk } from "./geode_afk_worker";
 import { processRegionFiles } from "./region_files_worker";
 import { WorkerContext, WrappedFunction } from "./run_in_worker";
 
@@ -18,6 +19,7 @@ function registerFunction(arg: WrappedFunction<any, any>) {
 console.log('I am the worker!');
 
 registerFunction(processRegionFiles);
+registerFunction(getBuddingAmethystPerChunk);
 
 let workerName = '';
 const workers = new Map<string, MessagePort>();

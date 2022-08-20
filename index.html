@@ -5,140 +5,42 @@
     <meta charset="utf-8">
     <title>Geode Optimizer</title>
     <link rel="stylesheet" href="style/main.css">
-    <link rel="stylesheet"
-        href="node_modules/@shoelace-style/shoelace/dist/themes/light.css" />
+    <link rel="stylesheet" href="style/nes.min.css">
 </head>
 
 <body>
-    <script type="module"
-        src="node_modules/@shoelace-style/shoelace/dist/shoelace.js"></script>
     <section class="main">
-        <h1>Minecraft Amethyst Farm Tutorial</h1>
-
-        <object data="schematics/just-geode-blocks.litematic" type="application/vnd.litematica+nbt"
-            data-camera="9:12:-13.5" data-target="8:7:7" data-autorotate="true" id="intro-geode">
-            <canvas width="720" height="480"></canvas>
-        </object>
-        <sl-range class="revealer" tooltip="none" id="intro-geode-slider" for="intro-geode" value="50"></sl-range>
-
-        <p>This page will show you how to build a farm to automatically collect amethyst shards in Minecraft. You can
-            load a geode from your world, or follow along with the example geode
-            above. It uses the concept originally developed by Neffty, and refined by Ilmango in <a
-                href="https://www.youtube.com/watch?v=fY90xF3ug84">this video</a>. All of the models
-            on this page are interactive! Use your mouse to rotate and zoom. Use the slider to reveal the budding
-            amethyst blocks.
-
-        <h2>1. Choose a geode</h2>
-
-        <sl-tab-group>
-            <sl-tab slot="nav" panel="sample">Use the sample geode</sl-tab>
-            <sl-tab slot="nav" panel="region">Load from your world</sl-tab>
-            <sl-tab slot="nav" panel="litematic">Load a .litematic</sl-tab>
-
-            <sl-tab-panel name="sample">We'll use the geode above as an example.</sl-tab-panel>
-            <sl-tab-panel name="region">
-                We'll pick a geode from your world. For this option, you'll need access to your world files.
-                Select all of the .mca and .mcc files in your world's <code>region</code> folder. It's OK if you don't
-                see any .mcc files &mdash; those are rare.
-                <br>
-                <input type="file" id="region-files" multiple>
-                <sl-progress-bar id="region-files-progress" style="visibility:hidden"></sl-progress-bar>
-                <div id="all-geodes">
-                </div>
-            </sl-tab-panel>
-            <sl-tab-panel name="litematic">
-                We'll load a geode from a litematica schematic file.
-                <label><input type="file" multiple> .litematic file</label>
-            </sl-tab-panel>
-        </sl-tab-group>
-
-        <h2>2. Analyze geode</h2>
-        <blockquote>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus magna. Cras in mi at felis aliquet
-                congue.
-                Ut a est eget ligula molestie gravida. Curabitur massa. Donec eleifend, libero at sagittis mollis,
-                tellus
-                est malesuada tellus, at luctus turpis elit sit amet quam. Vivamus pretium ornare est.</p>
-        </blockquote>
-
-        <h3>Header Level 3</h3>
-
-        <ul>
-            <li>Lorem ipsum dolor sit amet, consectetuer adipiscing elit.</li>
-            <li>Aliquam tincidunt mauris eu risus.</li>
-        </ul>
-
-        <pre><code>
-            #header h1 a {
-              display: block;
-              width: 300px;
-              height: 80px;
-            }
-            </code></pre>
-
-        <dl>
-            <dt>Definition list</dt>
-            <dd>Consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
-                aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
-                commodo consequat.</dd>
-            <dt>Lorem ipsum dolor sit amet</dt>
-            <dd>Consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
-                aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
-                commodo consequat.</dd>
-        </dl>
+        <h1>Geode AFK Spot Finder</h1>
+        <p>Finds the spot with the most budding amethyst blocks in range.</p>
+        <div>
+            <div id="step-1-balloon" class="nes-balloon from-left">
+                Load all .mca or .mcc files in your world's region folder.
+                <p>
+                    <label id="region-files-container" class="nes-btn file-select">
+                        <span>Select your files</span>
+                        <input id="region-files" type="file" multiple>
+                    </label>
+                </p>
+                <small>Your files are never uploaded &mdash; everything is processed in your browser.</small>
+            </div>
+        </div>
+        <div id="step-1-response" class="step hidden">
+            <div id="step-1-response-balloon" style="float:right;" class="nes-balloon from-right">
+            </div>
+        </div>
+        <div id="step-2" class="step hidden">
+            <div class="nes-balloon from-left" style="width: 100%">
+                <div id="afk-spot-log"></div>
+                <div id="map-label"></div>
+                <canvas id="map" width="512" height="512"></canvas>
+            </div>
+        </div>
     </section>
-    <sl-split-panel primary="start" position="25" class="main-panel">
-        <div slot="start" style="max-height: 100vh;overflow: auto;">
-            <label>.litematic file <input id="litematic" type="file"></label>
-            <br><label>or <button id="sample">load a sample</button></label>
-            <br><label>or preview a schematic <input id="preview" type="file" accept=".litematic"></label>
-            <br><label>or a region file <input id="region" type="file"></label>
-            <br><label>or find best geode afk spot <input id="afk" type="file" multiple></label>
-            <br><label>preview NBT file <input id="nbt" type="file"></label>
-            <details>
-                <summary>AFK spot finder instructions</summary>
-                <ol>
-                    <li>Press the button for "find best afk spot"</li>
-                    <li>Navigate to your world's files, and select all files in the "region" folder.</li>
-                    <li>Wait as the world is processed. Your files are never uploaded -- processing is in your browser!
-                    </li>
-                </ol>
-            </details>
-            <button id="save">Save to schematic</button>
-        </div>
-        <div slot="end">
-            <sl-split-panel vertical class="secondary-panel" style="height:100vh">
-                <div slot="start" style="height:100%;width:100%">
-                    <canvas id="c" style="width:100%;height:100%;display:block"></canvas>
-                </div>
-                <div slot="end" style="height:100%;width:100%">
-                    <div style="overflow:scroll;height:100%">
-                        <div id="block-readout"></div>
-                        <div>
-                            <pre><code id="afk-spot-log"></code></pre>
-                        </div>
-                        <div class="x-axis">
-                            <h2>X Axis - <span class="count"></span> machines</h2>
-                            <div class="grid"></div>
-                        </div>
-                        <div class="z-axis">
-                            <h2>Z Axis - <span class="count"></span> machines</h2>
-                            <div class="grid"></div>
-                        </div>
-                        <div class="y-axis">
-                            <h2>Y Axis - <span class="count"></span> machines</h2>
-                            <div class="grid"></div>
-                        </div>
-                    </div>
-                </div>
-            </sl-split-panel>
-        </div>
-    </sl-split-panel>
     <script type="text/javascript" src="third_party/three.js/three.min.js"></script>
     <script type="text/javascript" src="third_party/pako/pako.min.js"></script>
     <script type="text/javascript" src="out/root.js"></script>
     <script type="text/javascript" src="out/renderer.js"></script>
-    <script type="text/javascript" src="out/main.js"></script>
+    <script type="text/javascript" src="out/geode.js"></script>
 </body>
 
 </html>

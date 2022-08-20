@@ -1,9 +1,7 @@
-import { compress, decompress } from './compression';
-import { blockData, palette } from './gen_test';
+import { decompress } from './compression';
 import { blockState } from './litematic';
 import { expandLongPackedArray, readLongPackedArray } from './long_packed_array';
 import { Nbt, ShapeToInterface } from './nbt';
-import { base64 } from './util';
 
 const enum DataVersions {
   // First snapshot that leaves extra bits at the end of blockState arrays
@@ -24,30 +22,6 @@ const enum HeightMap {
 }
 
 const SECTOR_SIZE = 4096;
-
-function writeRegionFile(chunk: DataView) {
-  const requiredSectors = Math.ceil((chunk.byteLength + 5) / SECTOR_SIZE);
-  const result = new DataView(new ArrayBuffer(SECTOR_SIZE * (2 + requiredSectors)));
-
-  const offset = 2;
-
-  console.log('BYTE LENGTH', chunk.byteLength);
-  console.log('REQUIRED SECTORS', requiredSectors);
-  console.log('OFFSET', offset);
-  result.setUint32(0, (offset << 8) | requiredSectors);
-
-  const now = Math.floor(Date.now() / 1000);
-  result.setUint32(SECTOR_SIZE, now);
-
-  result.setUint32(offset * SECTOR_SIZE, chunk.byteLength + 1);
-  // compression type
-  result.setUint8(offset * SECTOR_SIZE + 4, 2);
-  for (let i = 0; i < chunk.byteLength; i++) {
-    result.setUint8(offset * SECTOR_SIZE + 5 + i, chunk.getUint8(i));
-  }
-
-  return result;
-}
 
 /**
  * Parses an Anvil Region file.
@@ -113,18 +87,6 @@ export class AnvilParser {
         const uncompressed = await decompress(compressedData);
         const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
         const data = nbtParser.parse(uncompressed);
-        if (data['Level']['xPos'] === 0 && data['Level']['zPos'] === 0) {
-          console.log(new Nbt('*').parse(uncompressed));
-          const data = new Nbt(CHUNK_1_13).parse(uncompressed);
-          (data as any)['Level']['TileEntities'] = [];
-          (data as any)['Level']['Sections'][1]['BlockStates'] = blockData;
-          (data as any)['Level']['Sections'][1]['Palette'] = palette;
-          console.log(blockData, palette);
-          const compressedChunk = await compress(new Nbt(CHUNK_1_13).serialize(data));
-          // const compressedChunk = compressedData;
-          const newRegion = writeRegionFile(new DataView(compressedChunk.buffer, compressedChunk.byteOffset, compressedChunk.byteLength));
-          console.log(base64(new Uint8Array(newRegion.buffer, newRegion.byteOffset, newRegion.byteLength)));
-        }
         yield new ChunkData(data);
       }
     }
@@ -134,6 +96,14 @@ export class AnvilParser {
     for await (const chunk of this.chunks()) {
       yield* chunk.sections;
     }
+  }
+
+  nChunksWithData(): number {
+    let nWithData = 0;
+    for (let i = 0; i < 32 * 32; i++) {
+      nWithData += Number(this.input.getUint32(i * 4) !== 0);
+    }
+    return nWithData;
   }
 }
 
@@ -183,44 +153,6 @@ const CHUNK_FORMAT_SHAPE = {
     'Sections': [MINECRAFT_SECTION],
     'Heightmaps': HEIGHT_MAPS
   },
-} as const;
-
-const CHUNK_1_13 = {
-  'DataVersion': 'int',
-  'Level': {
-    'Biomes': 'intArray',
-    'Entities': ['*'],
-    'HeightMaps': { '*': 'intArray' },
-    'InhabitedTime': 'long',
-    'LastUpdate': 'long',
-    'LiquidTicks': ['*'],
-    'LiquidsToBeTicked': [['*']],
-    'PostProcessing': [['*']],
-    'Sections': [{
-      'BlockLight': 'byteArray',
-      'BlockStates': 'longArray',
-      'Palette': [{
-        'Name': 'string',
-        'Properties': { '*': 'string' },
-        'SkyLight': 'intArray',
-        'Y': 'int'
-      }]
-    }],
-    'Status': 'string',
-    'Structures': {
-      'References': {
-        'EndCity': 'longArray',
-        'Fortress': 'longArray',
-        'Stronghold': 'longArray',
-      },
-      'Starts': {}
-    },
-    'TileEntities': ['*'],
-    'TileTicks': [{}],
-    'ToBeTicked': [['*']],
-    'xPos': 'int',
-    'yPos': 'int'
-  }
 } as const;
 
 type Section = ShapeToInterface<typeof MINECRAFT_SECTION>;
