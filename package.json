@@ -5,18 +5,29 @@
   "main": "main.js",
   "scripts": {
     "build": "tscc",
+    "test": "ts-node node_modules/jasmine/bin/jasmine --config=jasmine.json",
     "watch": "nodemon -e ts -x npm run build & nodemon -e aseprite -x npm run textures",
-    "textures": "node textures/generate.js textures/index.ts textures/textures.json textures/all.png textures/textures.aseprite"
+    "textures": "node src/textures/generate.js src/textures/index.ts src/textures/textures.json src/textures/all.png src/textures/textures.aseprite"
+  },
+  "engines": {
+    "node": ">=16.16.0"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@shoelace-style/shoelace": "^2.0.0-beta.77",
     "@squoosh/lib": "^0.4.0",
     "@tscc/tscc": "^0.7.4",
+    "@types/jasmine": "^4.0.2",
     "@types/pako": "^1.0.2",
     "@types/three": "^0.132.2",
+    "@typescript-eslint/eslint-plugin": "^5.30.4",
     "aseprite-cli": "^1.1.2",
+    "eslint": "^8.19.0",
+    "jasmine": "^4.0.2",
     "nodemon": "^2.0.13",
+    "ts-node": "^10.8.1",
+    "tsconfig-paths": "^4.0.0",
     "typescript": "^4.4.3"
   }
 }

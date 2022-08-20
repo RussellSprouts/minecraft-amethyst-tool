@@ -3,52 +3,32 @@ import { p } from './point';
 const SEGMENT_SIZE = 16;
 
 /**
- * A sparse representation of an infinite 3d array of uint16. Uses
- * 16^3 subchunks as the smallest unit of storage.
+ * A sparse representation of an infinite 3d array of ints. Uses
+ * 16^3 subchunks as the smallest unit of storage. Supports values
+ * up to 16 bits.
  */
 export class Virtual3DCanvas {
-  private segments: { [segment: string]: Uint16Array } = {};
-  private minx = 1e100;
-  private maxx = -1e100;
-  private miny = 1e100;
-  private maxy = -1e100;
-  private minz = 1e100;
-  private maxz = -1e100;
+  private segments: { [segment: string]: Uint16Array | Uint8Array } = {};
 
-  get extents() {
-    if (this.minx === 1e100) {
-      return {
-        minx: 0, maxx: 0, miny: 0, maxy: 0, minz: 0, maxz: 0
-      };
-    }
-    return {
-      minx: this.minx,
-      maxx: this.maxx,
-      miny: this.miny,
-      maxy: this.maxy,
-      minz: this.minz,
-      maxz: this.maxz,
-    }
-  }
+  // if true, then some value in the canvas required more than 8 bits.
+  requires16bits = false;
+  empty = true;
+  minx = 0;
+  maxx = 0;
+  miny = 0;
+  maxy = 0;
+  minz = 0;
+  maxz = 0;
 
   get width() {
-    if (this.minx === 1e100) {
-      return 1;
-    }
     return this.maxx - this.minx + 1;
   }
 
   get height() {
-    if (this.miny === 1e100) {
-      return 1;
-    }
     return this.maxy - this.miny + 1;
   }
 
   get length() {
-    if (this.minz === 1e100) {
-      return 1;
-    }
     return this.maxz - this.minz + 1;
   }
 
@@ -61,7 +41,7 @@ export class Virtual3DCanvas {
     z = ((z % SEGMENT_SIZE) + SEGMENT_SIZE) % SEGMENT_SIZE;
 
     const segmentPoint = p(sx, sy, sz);
-    if (!this.segments[segmentPoint]) {
+    if (this.segments[segmentPoint] == null) {
       return 0;
     }
 
@@ -69,13 +49,24 @@ export class Virtual3DCanvas {
   }
 
   set(x: number, y: number, z: number, value: number) {
+    if (value > 0xFF) {
+      this.requires16bits = true;
+    }
+
     // Recalculate the extents
-    this.maxx = Math.max(this.maxx, x);
-    this.maxy = Math.max(this.maxy, y);
-    this.maxz = Math.max(this.maxz, z);
-    this.minx = Math.min(this.minx, x);
-    this.miny = Math.min(this.miny, y);
-    this.minz = Math.min(this.minz, z);
+    if (this.empty) {
+      this.maxx = this.minx = x;
+      this.maxy = this.miny = y;
+      this.maxz = this.minz = z;
+      this.empty = false;
+    } else {
+      this.maxx = Math.max(this.maxx, x);
+      this.maxy = Math.max(this.maxy, y);
+      this.maxz = Math.max(this.maxz, z);
+      this.minx = Math.min(this.minx, x);
+      this.miny = Math.min(this.miny, y);
+      this.minz = Math.min(this.minz, z);
+    }
 
     const sx = Math.floor(x / SEGMENT_SIZE);
     const sy = Math.floor(y / SEGMENT_SIZE);
@@ -89,21 +80,30 @@ export class Virtual3DCanvas {
     z = ((z % SEGMENT_SIZE) + SEGMENT_SIZE) % SEGMENT_SIZE;
 
     const segmentPoint = p(sx, sy, sz);
-    if (!this.segments[segmentPoint]) {
-      this.segments[segmentPoint] = new Uint16Array(SEGMENT_SIZE * SEGMENT_SIZE * SEGMENT_SIZE);
+    if (this.segments[segmentPoint] == null) {
+      // create a new segment if needed
+      this.segments[segmentPoint] = value > 0xFF
+        ? new Uint16Array(SEGMENT_SIZE * SEGMENT_SIZE * SEGMENT_SIZE)
+        : new Uint8Array(SEGMENT_SIZE * SEGMENT_SIZE * SEGMENT_SIZE);
+    } else if (value > 0xFF && this.segments[segmentPoint] instanceof Uint8Array) {
+      // move the data to a 16bit segment if needed
+      this.segments[segmentPoint] = Uint16Array.from(this.segments[segmentPoint]);
     }
+
     this.segments[segmentPoint][x + SEGMENT_SIZE * (z + SEGMENT_SIZE * y)] = value;
   }
 
-  getAllBlocks(): [array: Uint16Array, nonZero: number] {
+  getAllBlocks(): [array: Uint16Array | Uint8Array, nonZero: number] {
     const width = this.width;
     const height = this.height;
     const length = this.length;
 
-    const result = new Uint16Array(width * height * length);
+    const result = this.requires16bits
+      ? new Uint16Array(width * height * length)
+      : new Uint8Array(width * height * length);
 
     // If we haven't written any blocks, return a single empty block.
-    if (this.minx === 1e100) { return [result, 0]; }
+    if (this.empty) { return [result, 0]; }
 
     // TODO: this could be more efficient if we only process
     // chunks that exist.

@@ -1,10 +1,28 @@
 {
     "modules": {
-        "renderer": "src/renderer.ts",
+        "root": "src/root.ts",
+        "renderer": {
+            "entry": "src/renderer.ts",
+            "dependencies": [
+                "root"
+            ]
+        },
         "main": {
             "entry": "src/main.ts",
             "dependencies": [
                 "renderer"
+            ]
+        },
+        "geode": {
+            "entry": "src/geode.ts",
+            "dependencies": [
+                "renderer"
+            ]
+        },
+        "worker": {
+            "entry": "src/worker.ts",
+            "dependencies": [
+                "root"
             ]
         }
     },
@@ -15,7 +33,8 @@
     },
     "compilerFlags": {
         "language_out": "ECMASCRIPT_2020",
-        "create_source_map": "%outname%.map"
+        "create_source_map": "%outname%.map",
+        "emit_use_strict": true
     },
     "prefix": "out/"
 }

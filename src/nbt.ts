@@ -8,8 +8,12 @@
  * the NBT data.
  */
 
+import { DataViewReader, DataViewWriter } from "./data_view_stream";
+import { DefaultEndianDataView } from "./default_endian_data_view";
+import { checkExhaustive } from "./util";
+
 /** The possible Nbt tags. */
-export const enum Tags {
+const enum Tags {
   End = 0,
   Byte = 1,
   Short = 2,
@@ -23,15 +27,13 @@ export const enum Tags {
   Compound = 10,
   IntArray = 11,
   LongArray = 12,
-};
+}
 
 interface NbtCompoundShape {
   readonly [key: string]: NbtShape;
 }
 
-interface NbtListShape {
-  readonly 0: NbtShape;
-}
+type NbtListShape = readonly [NbtShape];
 
 interface NbtCompoundMapShape {
   readonly '*': NbtShape;
@@ -61,7 +63,7 @@ export interface SimpleShapeToInterface {
   long: bigint;
   float: number;
   double: number;
-  // Use a DataView for the int arrays so that the values
+  // Use a DataView for the int arrays so that
   // we can just provide a view into the decompressed binary,
   // so that we don't need to make a copy. We can't use
   // a TypedArray because the data is big endian, and TypedArrays
@@ -105,188 +107,6 @@ function assert(a: boolean, message: string, path?: string): asserts a is true {
   }
 }
 
-function checkExhaustive(a: never): never {
-  throw new Error(`Unexpected case: ${a}`);
-}
-
-const decoder = new TextDecoder("utf-8");
-const encoder = new TextEncoder();
-
-/**
- * Parses utf8 encoded text to a JS string
- * 
- * @param array The data to decode
- * @param i The start index
- * @param length The length
- * @returns a JS string
- */
-function decodeUtf8(array: DataView, i: number, length: number): string {
-  if (length === 0) { return ''; }
-  return decoder.decode(new DataView(array.buffer, i, length));
-}
-
-/**
- * Encodes the given string as utf8.
- * 
- * @param s The string
- * @returns The utf8 encoding as a Uint8Array
- */
-function encodeUtf8(s: string): Uint8Array {
-  return encoder.encode(s);
-}
-
-/**
- * Streams data to a DataView.
- * Each writer method moves the cursor forward,
- * and resizing is automatic.
- */
-class DataViewWriter {
-  i = 0;
-  data: DataView;
-  constructor(initialCapacity: number = 1024) {
-    this.data = new DataView(new ArrayBuffer(initialCapacity));
-  }
-
-  byte(n: number) {
-    this.assertCapacity(1);
-    this.data.setInt8(this.i, n);
-    this.i++;
-  }
-
-  short(n: number) {
-    this.assertCapacity(2);
-    this.data.setInt16(this.i, n);
-    this.i += 2;
-  }
-
-  int(n: number) {
-    this.assertCapacity(4);
-    this.data.setInt32(this.i, n);
-    this.i += 4;
-  }
-
-  long(n: bigint) {
-    this.assertCapacity(8);
-    this.data.setBigInt64(this.i, n);
-    this.i += 8;
-  }
-
-  float(n: number) {
-    this.assertCapacity(4);
-    this.data.setFloat32(this.i, n);
-    this.i += 4;
-  }
-
-  double(n: number) {
-    this.assertCapacity(8);
-    this.data.setFloat64(this.i, n);
-    this.i += 8;
-  }
-
-  string(s: string) {
-    const encoded = encodeUtf8(s);
-    this.assertCapacity(encoded.byteLength + 2);
-    this.data.setUint16(this.i, encoded.byteLength);
-    this.i += 2;
-    for (let i = 0; i < encoded.byteLength; i++) {
-      this.data.setUint8(this.i + i, encoded[i]);
-    }
-    this.i += encoded.byteLength;
-  }
-
-  array(array: DataView, width: number) {
-    const nItems = Math.floor(array.byteLength / width);
-    this.assertCapacity(array.byteLength + 4);
-    this.data.setInt32(this.i, nItems);
-    this.i += 4;
-    // we can just copy byte-by-byte, since both buffers
-    // are big-endian.
-    for (let i = 0; i < array.byteLength; i++) {
-      this.data.setUint8(this.i + i, array.getUint8(i));
-    }
-    this.i += array.byteLength;
-  }
-
-  final(): DataView {
-    return new DataView(this.data.buffer, 0, this.i);
-  }
-
-  /**
-   * Assures that the internal buffer can hold newBytes extra
-   * bytes, doubling the current buffer size as necessary.
-   * @param newBytes The number of new bytes to add
-   */
-  private assertCapacity(newBytes: number) {
-    if (this.i + newBytes > this.data.byteLength) {
-      let newSize = this.data.byteLength * 2;
-      while (this.i + newBytes > newSize) {
-        newSize *= 2;
-      }
-      const newData = new DataView(new ArrayBuffer(newSize));
-      for (let i = 0; i < this.data.byteLength; i++) {
-        newData.setInt8(i, this.data.getInt8(i));
-      }
-      this.data = newData;
-    }
-  }
-}
-
-/**
- * Streams data from a DataView.
- * Each accessor method moves the cursor forward,
- * consuming the data.
- */
-class DataViewReader {
-  i = 0;
-  constructor(readonly data: DataView) {
-  }
-
-  byte(): number {
-    this.i += 1;
-    return this.data.getInt8(this.i - 1);
-  }
-
-  short(): number {
-    this.i += 2;
-    return this.data.getInt16(this.i - 2);
-  }
-
-  int(): number {
-    this.i += 4;
-    return this.data.getInt32(this.i - 4);
-  }
-
-  long(): bigint {
-    this.i += 8;
-    return this.data.getBigInt64(this.i - 8);
-  }
-
-  string(): string {
-    const length = this.data.getUint16(this.i);
-    this.i += 2;
-    const string = decodeUtf8(this.data, this.i, length);
-    this.i += length;
-    return string;
-  }
-
-  float(): number {
-    this.i += 4;
-    return this.data.getFloat32(this.i - 4);
-  }
-
-  double(): number {
-    this.i += 8;
-    return this.data.getFloat64(this.i - 8);
-  }
-
-  array(width: number): DataView {
-    const length = this.int();
-    const result = new DataView(this.data.buffer, this.i, length * width);
-    this.i += result.byteLength;
-    return result;
-  }
-}
-
 /**
  * A Nbt parser and serializer for a given shape.
  * Keeping the shape separate from the data allows
@@ -302,8 +122,8 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
    * Parses the data in the Uint8Array into the JS object
    * given by the shape of this Nbt parser.
    */
-  parse(data: Uint8Array): ShapeToInterface<S> {
-    const asView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  parse(data: Uint8Array, littleEndian = false): ShapeToInterface<S> {
+    const asView = new DefaultEndianDataView(littleEndian, data.buffer, data.byteOffset, data.byteLength);
     const reader = new DataViewReader(asView);
     return this.parseRoot(reader);
   }
@@ -319,10 +139,19 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
 
   private parseRoot(data: DataViewReader): ShapeToInterface<S> {
     assert(data.byte() === Tags.Compound, 'Expected a compound at root');
-    assert(data.string() === '', 'Expected an empty name at root');
+    data.string();
     return this.parsePayload(data, Tags.Compound, this.shape, 'root') as ShapeToInterface<S>;
   }
 
+  /**
+   * Parses the payload value at the current position of the DataViewReader.
+   * 
+   * @param data The data view reader
+   * @param tagType The tag of the payload to parse
+   * @param shape The shape of the data
+   * @param path The path so far, used for error messages
+   * @returns The payload value, based 
+   */
   private parsePayload(data: DataViewReader, tagType: Tags, shape: NbtShape, path: string): unknown {
     switch (tagType) {
       case Tags.End:
@@ -353,19 +182,20 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
         return data.array(1);
       case Tags.IntArray:
         this.assertSimpleShape(shape, 'intArray', path);
-        return data.array(4)
+        return data.array(4);
       case Tags.LongArray:
         this.assertSimpleShape(shape, 'longArray', path);
-        return data.array(8)
+        return data.array(8);
       case Tags.Compound: {
         this.assertCompoundShape(shape, path);
         const result: { [key: string]: unknown } = {};
         let tagType: Tags;
         while ((tagType = data.byte()) !== Tags.End) {
           const name = data.string();
-          const payload = this.parsePayload(data, tagType, shapeGet(shape, name), `${path}.${name}`);
           if (shape === '*' || shape['*'] || name in shape) {
-            result[name] = payload;
+            result[name] = this.parsePayload(data, tagType, shapeGet(shape, name), `${path}.${name}`);
+          } else {
+            this.skipPayload(data, tagType);
           }
         }
         return result;
@@ -385,16 +215,78 @@ export class Nbt<S extends { [key: string]: NbtShape } | '*'> {
     }
   }
 
+  /**
+   * Skips the payload of the given type at the current position of the 
+   * DataViewReader. Simply advances with minimal processing of the data,
+   * so that we can quickly skip over parts that we don't understand.
+   * @param data The data view reader
+   * @param tagType The tag of the payload to skip
+   */
+  private skipPayload(data: DataViewReader, tagType: Tags): void {
+    switch (tagType) {
+      case Tags.End:
+        return undefined;
+      case Tags.Byte:
+        data.skip(1);
+        return;
+      case Tags.Short:
+        data.skip(2);
+        return;
+      case Tags.Int:
+        data.skip(4);
+        return;
+      case Tags.Long:
+        data.skip(8);
+        return;
+      case Tags.Float:
+        data.skip(4);
+        return;
+      case Tags.Double:
+        data.skip(8);
+        return;
+      case Tags.String:
+        data.skipString();
+        return;
+      case Tags.ByteArray:
+        data.skipArray(1);
+        return;
+      case Tags.IntArray:
+        data.skipArray(4);
+        return;
+      case Tags.LongArray:
+        data.skipArray(8);
+        return;
+      case Tags.Compound: {
+        let tagType: Tags;
+        while ((tagType = data.byte()) !== Tags.End) {
+          data.skipString();
+          this.skipPayload(data, tagType);
+        }
+        return;
+      }
+      case Tags.List: {
+        const itemType = data.byte() as Tags;
+        const nItems = data.int();
+        for (let i = 0; i < nItems; i++) {
+          this.skipPayload(data, itemType);
+        }
+        return;
+      }
+      default:
+        checkExhaustive(tagType);
+    }
+  }
+
   private assertSimpleShape<T extends NbtShape>(shape: NbtShape, t: T, path: string): asserts shape is T | '*' {
     assert(shape === '*' || shape === t, `Found a ${t}, but expected ${shape}`, path);
   }
 
   private assertCompoundShape(shape: NbtShape, path: string): asserts shape is { [key: string]: NbtShape } | '*' {
-    assert(shape === '*' || !Array.isArray(shape) && typeof shape === 'object', `Found a compound, but expected ${shape}.`, path);
+    assert(shape === '*' || !Array.isArray(shape) && typeof shape === 'object', `Found ${shape}, but expected a compound.`, path);
   }
 
   private assertListShape(shape: NbtShape, path: string): asserts shape is [NbtShape] | '*' {
-    assert(shape === '*' || Array.isArray(shape), `Found a list, but expected ${shape}`, path);
+    assert(shape === '*' || Array.isArray(shape), `Found ${shape}, but expected a list`, path);
   }
 
   private serializeRoot(value: unknown, shape: NbtShape): DataView {

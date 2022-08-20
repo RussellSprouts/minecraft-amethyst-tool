@@ -1,9 +1,7 @@
-import * as pako from 'pako';
+import { decompress } from './compression';
 import { blockState } from './litematic';
+import { expandLongPackedArray, readLongPackedArray } from './long_packed_array';
 import { Nbt, ShapeToInterface } from './nbt';
-import { p, Point } from './point';
-import { Renderer } from './renderer';
-import { Virtual3DCanvas } from './virtual_canvas';
 
 const enum DataVersions {
   // First snapshot that leaves extra bits at the end of blockState arrays
@@ -12,6 +10,15 @@ const enum DataVersions {
   SNAPSHOT_21w37a = 2834,
   // First snapshot that uses new format for top-level info
   SNAPSHOT_21w43a = 2844,
+}
+
+const enum HeightMap {
+  MOTION_BLOCKING = 'MOTION_BLOCKING',
+  MOTION_BLOCKING_NO_LEAVES = 'MOTION_BLOCKING_NO_LEAVES',
+  OCEAN_FLOOR = 'OCEAN_FLOOR',
+  OCEAN_FLOOR_WG = 'OCEAN_FLOOR_WG',
+  WORLD_SURFACE = 'WORLD_SURFACE',
+  WORLD_SURFACE_WG = 'WORLD_SURFACE_WG',
 }
 
 const SECTOR_SIZE = 4096;
@@ -43,7 +50,7 @@ const SECTOR_SIZE = 4096;
  * }
  */
 export class AnvilParser {
-  private parsedChunks: Record<string, unknown> = {};
+  private parsedChunks: Record<string, ChunkData> = {};
   constructor(private input: DataView) {
   }
 
@@ -53,102 +60,50 @@ export class AnvilParser {
    */
   private chunkOffset(x: number, z: number) {
     const index = 4 * ((x & 31) + 32 * (z & 31));
-    const length = this.input.getUint8(index + 3);
+    const chunkLocation = this.input.getUint32(index);
+    const length = chunkLocation & 0xFF;
     if (length <= 0) {
       return -1;
     }
 
-    return (this.input.getUint32(index) >> 8) * SECTOR_SIZE;
+    return (chunkLocation >> 8) * SECTOR_SIZE;
   }
 
-  /**
-   * Counts all of the blocks of the specified type.
-   * Returns a map of chunk coordinate to number of blocks.
-   */
-  countBlocks(state: string): Record<Point, number> {
-    const result: Record<Point, number> = {};
+  async *chunks(): AsyncIterable<ChunkData> {
+    if (this.input.byteLength === 0) {
+      return;
+    }
+
     for (let x = 0; x < 32; x++) {
       for (let z = 0; z < 32; z++) {
         const startIndex = this.chunkOffset(x, z);
         if (startIndex < 0) { continue; }
         const dataLength = this.input.getUint32(startIndex);
         const compressionType = this.input.getUint8(startIndex + 4);
+        if (compressionType !== 2) {
+          console.warn("Unexpected compression type", compressionType);
+        }
         const compressedData = new Uint8Array(this.input.buffer, startIndex + 5, dataLength - 1);
-        const uncompressed = pako.ungzip(compressedData);
+        const uncompressed = await decompress(compressedData);
         const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
         const data = nbtParser.parse(uncompressed);
-        const chunk = new ChunkData(data);
-
-        let chunkTotal = 0;
-        for (const section of chunk.sections) {
-          const indexOfTarget = section.palette.indexOf(state);
-
-          if (indexOfTarget !== -1) {
-            for (let y = 0; y < 16; y++) {
-              for (let z = 0; z < 16; z++) {
-                for (let x = 0; x < 16; x++) {
-                  const state = section.getPaletteIndex(x, y, z);
-                  if (state === indexOfTarget) {
-                    chunkTotal++;
-                  }
-                }
-              }
-            }
-          }
-        }
-        if (chunkTotal > 0) {
-          result[p(chunk.xPos, 0, chunk.zPos)] = chunkTotal;
-        }
+        yield new ChunkData(data);
       }
     }
-    return result;
   }
 
-  parseChunk(x: number, z: number, allBlocks: Set<string>, renderer: Renderer, blockCounts: Map<string, number>) {
-    const index = `${x}:${z}`;
-    if (this.parsedChunks[index]) {
-      return this.parsedChunks[index];
+  async *sections(): AsyncIterable<ChunkSection> {
+    for await (const chunk of this.chunks()) {
+      yield* chunk.sections;
     }
+  }
 
-    const startIndex = this.chunkOffset(x, z);
-    if (startIndex !== -1) {
-      const dataLength = this.input.getUint32(startIndex);
-      const compressionType = this.input.getUint8(startIndex + 4);
-      const compressedData = new Uint8Array(this.input.buffer, startIndex + 5, dataLength - 1);
-      performance.mark('a')
-      const uncompressed = pako.ungzip(compressedData);
-      const basicNbtParser = new Nbt('*');
-      const nbtParser = new Nbt(CHUNK_FORMAT_SHAPE);
-
-      // console.log('Unshaped-data', basicNbtParser.parse(uncompressed));
-      performance.mark('b');
-      performance.measure('unzip', 'a', 'b');
-      const data = nbtParser.parse(uncompressed);
-      const chunk = new ChunkData(data);
-      // console.log(data);
-
-      performance.mark('c');
-      performance.measure('nbt-parse', 'b', 'c');
-      for (const section of chunk.sections) {
-        const palette = section.palette;
-        const startY = section.y;
-        for (const state of palette) {
-          allBlocks.add(state);
-        }
-        for (let y = 0; y < 16; y++) {
-          for (let z = 0; z < 16; z++) {
-            for (let x = 0; x < 16; x++) {
-              const stateIndex = section.getPaletteIndex(x, y, z);
-              const stateString = palette[stateIndex];
-              blockCounts.set(stateString, (blockCounts.get(stateString) ?? 0) + 1);
-              // renderer.setBlockState(x, startY * 16 + y, z, stateString);
-            }
-          }
-        }
-      }
-      performance.mark('d');
-      performance.measure('decode', 'c', 'd');
+  nChunksWithData(): number {
+    let nWithData = 0;
+    for (let i = 0; i < 32 * 32; i++) {
+      nWithData += Number(this.input.getUint32(i * 4) !== 0);
     }
+    return nWithData;
   }
 }
 
@@ -172,6 +127,15 @@ const MINECRAFT_SECTION = {
   }],
 } as const;
 
+const HEIGHT_MAPS = {
+  'MOTION_BLOCKING': 'longArray',
+  'MOTION_BLOCKING_NO_LEAVES': 'longArray',
+  'OCEAN_FLOOR': 'longArray',
+  'OCEAN_FLOOR_WG': 'longArray',
+  'WORLD_SURFACE': 'longArray',
+  'WORLD_SURFACE_WG': 'longArray',
+} as const;
+
 const CHUNK_FORMAT_SHAPE = {
   'DataVersion': 'int',
 
@@ -179,6 +143,7 @@ const CHUNK_FORMAT_SHAPE = {
   'sections': [MINECRAFT_SECTION],
   'xPos': 'int',
   'zPos': 'int',
+  'Heightmaps': HEIGHT_MAPS,
 
   // older versions
   'Level': {
@@ -186,6 +151,7 @@ const CHUNK_FORMAT_SHAPE = {
     'zPos': 'int',
     'Status': 'string',
     'Sections': [MINECRAFT_SECTION],
+    'Heightmaps': HEIGHT_MAPS
   },
 } as const;
 
@@ -193,11 +159,16 @@ type Section = ShapeToInterface<typeof MINECRAFT_SECTION>;
 
 class ChunkData {
   constructor(readonly data: ShapeToInterface<typeof CHUNK_FORMAT_SHAPE>) {
-    this.sections = this.data?.['sections']?.map(section => new ChunkSection(this.dataVersion, section as Section)) ??
-      this.data?.['Level']?.['Sections']?.map(section => new ChunkSection(this.dataVersion, section as Section)) ?? [];
+    const sectionsData = this.data?.['sections'] ?? this.data?.['Level']?.['Sections'] ?? [];
+    this.sections = sectionsData.map(section => {
+      const result = new ChunkSection(this, this.dataVersion, section);
+      this.sectionsByY[result.y] = result;
+      return result;
+    });
   }
 
   readonly sections: ChunkSection[];
+  readonly sectionsByY: { [key: number]: ChunkSection } = {};
 
   get dataVersion() {
     return this.data['DataVersion'];
@@ -210,49 +181,55 @@ class ChunkData {
   get zPos() {
     return this.data['zPos'] ?? this.data['Level']?.['zPos'];
   }
+
+  getHeightMap(map: HeightMap, x: number, z: number) {
+    const heightMap = this.data['Heightmaps']?.[map] ?? this.data['Level']?.['Heightmaps']?.[map];
+    if (heightMap != null) {
+      const blockIndex = x + z * 16;
+      return readLongPackedArray(heightMap, 9, blockIndex, this.dataVersion < DataVersions.SNAPSHOT_20w17a);
+    }
+    return 0;
+  }
+
+  getBlockState(x: number, y: number, z: number): string {
+    const sectionIndex = Math.floor(y / 16);
+    const section = this.sectionsByY[sectionIndex];
+    if (section != null) {
+      return section.getBlockState(x, y, z);
+    }
+    return 'minecraft:air';
+  }
 }
 
 class ChunkSection {
-  constructor(readonly dataVersion: number, section: Section) {
-    this.palette = (section['block_states']?.['palette']
+  constructor(readonly chunk: ChunkData, readonly dataVersion: number, section: Section) {
+    const paletteEntries = section['block_states']?.['palette']
       ?? section['Palette']
-      ?? [{ 'Name': 'minecraft:air', 'Properties': {} }]).map(blockState);
+      ?? [{ 'Name': 'minecraft:air', 'Properties': {} }];
+    this.palette = paletteEntries.map(blockState);
     this.y = section['Y'] ?? 0;
-    this.blockStates = section['block_states']?.['data'] ?? section['BlockStates'];
+    this.packedBlockStates = section['block_states']?.['data'] ?? section['BlockStates'];
     this.bitsPerBlock = Math.max(Math.ceil(Math.log2(this.palette.length)), 4);
   }
 
   palette: string[];
   y: number;
-  blockStates: DataView | undefined;
+  packedBlockStates: DataView | undefined;
+  blockStates: Uint16Array | Uint8Array | undefined;
   bitsPerBlock: number;
 
-  getPaletteIndex(x: number, y: number, z: number) {
-    x = x & 0xF;
-    y = y & 0xF;
-    z = z & 0xF;
-    const blockIndex = x + z * 16 + y * 256;
-    const bitMask = (1 << this.bitsPerBlock) - 1;
-    // Before 20w17a, blocks could straddle multiple longs. Afterward, the leftover bits are simply unused.
-    const unusedBitsPerLong = this.dataVersion < DataVersions.SNAPSHOT_20w17a
-      ? 0
-      : 64 % this.bitsPerBlock;
-    const blocksPerLong = Math.floor(64 / this.bitsPerBlock);
-    const bitIndex = blockIndex * this.bitsPerBlock + Math.floor(blockIndex / blocksPerLong) * unusedBitsPerLong;
-    const currentLongIndex = Math.floor(bitIndex / 64) * 8;
-    const blockStates = this.blockStates;
-    if (blockStates) {
-      const indexInLong = bitIndex % 64;
-      if (indexInLong < 32) {
-        const currentLongLo = blockStates.getUint32(currentLongIndex + 4);
-        const currentLongHi = blockStates.getUint32(currentLongIndex);
-        return ((currentLongLo >>> indexInLong) | (currentLongHi << (31 - indexInLong) << 1)) & bitMask;
-      } else {
-        const currentLongHi = blockStates.getUint32(currentLongIndex);
-        const nextLongLo = currentLongIndex + 8 < blockStates.byteLength ? blockStates.getUint32(currentLongIndex + 12) : 0;
-        return ((currentLongHi >>> (indexInLong - 32)) | (nextLongLo << (63 - indexInLong) << 1)) & bitMask;
-      }
+  getBlockState(x: number, y: number, z: number): string {
+    if (!this.blockStates && this.packedBlockStates) {
+      this.blockStates = expandLongPackedArray(this.packedBlockStates, this.bitsPerBlock, 16 * 16 * 16, this.dataVersion < DataVersions.SNAPSHOT_20w17a);
     }
-    return 0;
+
+    if (this.blockStates) {
+      x = x & 0xF;
+      y = y & 0xF;
+      z = z & 0xF;
+      const blockIndex = x + z * 16 + y * 256;
+      return this.palette[this.blockStates[blockIndex]];
+    }
+    return 'minecraft:air';
   }
 }
