@@ -4,7 +4,7 @@ import { Point, p, parseP } from './point';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as textures from './textures/index';
 import { getBlockInfo } from './blocks/index';
-import { assertInstanceOf, assertNotNull } from './util';
+import { $, assertNotNull } from './util';
 
 const spriteSheet = new THREE.TextureLoader().load(textures.image);
 spriteSheet.minFilter = THREE.NearestFilter;
@@ -33,7 +33,7 @@ export class Renderer extends EventTarget {
   constructor(cssQuery: string | HTMLCanvasElement) {
     super();
     const canvas = typeof cssQuery === 'string'
-      ? assertInstanceOf(document.querySelector(cssQuery), HTMLCanvasElement)
+      ? $(cssQuery, HTMLCanvasElement)
       : cssQuery;
 
     this.intersectionObserver = new IntersectionObserver((entries) => {

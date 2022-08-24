@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Geode Optimizer</title>
+    <link rel="stylesheet" href="style/main.css">
+    <link rel="stylesheet" href="style/nes.min.css">
+</head>
+
+<body>
+    <section class="main">
+        <h1>Where to AFK in a chunk</h1>
+        <p>Depending on where you stand, different chunks will be in random-tick range.</p>
+        <p>The chunk corners load the most chunks, but for geode farms, you may have more geodes in range with a different spot.</p>
+        <p>The colored regions are the spots that have unique chunk combinations loaded.</p>
+        <div>
+            <p id="loading">Loading...</p>
+            <div>
+                <p id="hoverInfo">&nbsp;</p>
+                <canvas style="width:48%;display:inline" id="chunkPattern" width="512" height="512"></canvas>
+                <canvas style="width:48%;display:inline" id="chunkPatternMap" width="512" height="512"></canvas>
+            </div>
+            <div id="patternLog"></div>
+        </div>
+    </section>
+    <footer>
+        <div class="nes-container with-title">
+            <p class="title">Other tools</p>
+            <a href="index.html">geode</a> &mdash; afk
+        </div>
+    </footer>
+    <script type="text/javascript" src="third_party/three.js/three.min.js"></script>
+    <script type="text/javascript" src="third_party/pako/pako.min.js"></script>
+    <script type="text/javascript" src="out/root.js"></script>
+    <script type="text/javascript" src="out/renderer.js"></script>
+    <script type="text/javascript" src="out/afk.js"></script>
+</body>
+
+</html>

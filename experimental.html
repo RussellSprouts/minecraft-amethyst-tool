@@ -16,7 +16,7 @@
     <section class="main">
         <h1>Minecraft Amethyst Farm Tutorial</h1>
 
-        <object data="schematics/just-geode-blocks.litematic" type="application/vnd.litematica+nbt"
+        <object data="samples/just-geode-blocks.litematic" type="application/vnd.litematica+nbt"
             data-camera="9:12:-13.5" data-target="8:7:7" data-autorotate="true" id="intro-geode">
             <canvas width="720" height="480"></canvas>
         </object>
@@ -94,17 +94,7 @@
             <br><label>or <button id="sample">load a sample</button></label>
             <br><label>or preview a schematic <input id="preview" type="file" accept=".litematic"></label>
             <br><label>or a region file <input id="region" type="file"></label>
-            <br><label>or find best geode afk spot <input id="afk" type="file" multiple></label>
             <br><label>preview NBT file <input id="nbt" type="file"></label>
-            <details>
-                <summary>AFK spot finder instructions</summary>
-                <ol>
-                    <li>Press the button for "find best afk spot"</li>
-                    <li>Navigate to your world's files, and select all files in the "region" folder.</li>
-                    <li>Wait as the world is processed. Your files are never uploaded -- processing is in your browser!
-                    </li>
-                </ol>
-            </details>
             <button id="save">Save to schematic</button>
         </div>
         <div slot="end">

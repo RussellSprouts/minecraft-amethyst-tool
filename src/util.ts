@@ -63,3 +63,14 @@ export function base64(array: Uint8Array) {
   }
   return btoa(binaryString);
 }
+
+export function $(query: string): HTMLElement;
+export function $<T extends HTMLElement>(query: string, constructorType?: { new(...args: any[]): T }): T;
+export function $<T extends HTMLElement = HTMLElement>(query: string, constructorType?: { new(...args: any[]): T }): T {
+  const element = document.querySelector(query);
+  if (!constructorType) {
+    return assertInstanceOf(element, HTMLElement) as T;
+  } else {
+    return assertInstanceOf(element, constructorType);
+  }
+}

@@ -4,21 +4,110 @@ import { getBuddingAmethystPerChunk } from "./geode_afk_worker";
 import { MapRenderer } from "./map";
 import { p, parseP, Point } from "./point";
 import { createNamedWorker } from "./run_in_worker";
-import { assertInstanceOf } from "./util";
+import { $ } from "./util";
 
 createNamedWorker('general');
 loadEmbeddedSchematics();
 activateFileSelects();
 
-/*
-const helpButton = assertInstanceOf(document.getElementById('help'), HTMLButtonElement);
-const helpResponse = assertInstanceOf(document.getElementById('help-response'), HTMLDivElement);
-helpButton.addEventListener('click', () => {
-  helpResponse.classList.toggle('hidden');
-});
-*/
+/**
+ * These 88 locations represent the unique combinations
+ * of chunks that can be in random-tick range while standing
+ * in a chunk. The numbers represent the fraction of the chunk.
+ * For now, just use 0,0.
+ */
+const LOCATIONS_TO_SEARCH = [
+  { x: 0.0390625, z: 0.0390625 },
+  { x: 0, z: 0.306640625 },
+  { x: 0, z: 0.69140625 },
+  { x: 0.0390625, z: 0.958984375 },
+  { x: 0.0390625, z: 0.333984375 },
+  { x: 0.0390625, z: 0.666015625 },
+  { x: 0.14453125, z: 0.380859375 },
+  { x: 0.14453125, z: 0.619140625 },
+  { x: 0.177734375, z: 0.3046875 },
+  { x: 0.177734375, z: 0.6953125 },
+  { x: 0.169921875, z: 0.2265625 },
+  { x: 0.169921875, z: 0.7734375 },
+  { x: 0.2109375, z: 0.4296875 },
+  { x: 0.2109375, z: 0.5703125 },
+  { x: 0.24609375, z: 0.24609375 },
+  { x: 0.24609375, z: 0.75390625 },
+  { x: 0.2265625, z: 0.169921875 },
+  { x: 0.2265625, z: 0.830078125 },
+  { x: 0.23828125, z: 0.4765625 },
+  { x: 0.23828125, z: 0.521484375 },
+  { x: 0.25390625, z: 0.4609375 },
+  { x: 0.25390625, z: 0.5390625 },
+  { x: 0.3046875, z: 0.177734375 },
+  { x: 0.3046875, z: 0.822265625 },
+  { x: 0.291015625, z: 0.458984375 },
+  { x: 0.291015625, z: 0.541015625 },
+  { x: 0.3046875, z: 0.99609375 },
+  { x: 0.306640625, z: 0 },
+  { x: 0.333984375, z: 0.0390625 },
+  { x: 0.333984375, z: 0.9609375 },
+  { x: 0.35546875, z: 0.404296875 },
+  { x: 0.35546875, z: 0.595703125 },
+  { x: 0.380859375, z: 0.14453125 },
+  { x: 0.380859375, z: 0.85546875 },
+  { x: 0.404296875, z: 0.35546875 },
+  { x: 0.404296875, z: 0.64453125 },
+  { x: 0.4296875, z: 0.2109375 },
+  { x: 0.4296875, z: 0.7890625 },
+  { x: 0.458984375, z: 0.291015625 },
+  { x: 0.458984375, z: 0.708984375 },
+  { x: 0.4609375, z: 0.25390625 },
+  { x: 0.4609375, z: 0.74609375 },
+  { x: 0.4765625, z: 0.23828125 },
+  { x: 0.4765625, z: 0.76171875 },
+  { x: 0.521484375, z: 0.23828125 },
+  { x: 0.521484375, z: 0.76171875 },
+  { x: 0.5703125, z: 0.2109375 },
+  { x: 0.5703125, z: 0.7890625 },
+  { x: 0.5390625, z: 0.25390625 },
+  { x: 0.5390625, z: 0.74609375 },
+  { x: 0.541015625, z: 0.291015625 },
+  { x: 0.541015625, z: 0.708984375 },
+  { x: 0.595703125, z: 0.35546875 },
+  { x: 0.595703125, z: 0.64453125 },
+  { x: 0.619140625, z: 0.14453125 },
+  { x: 0.619140625, z: 0.85546875 },
+  { x: 0.64453125, z: 0.404296875 },
+  { x: 0.64453125, z: 0.595703125 },
+  { x: 0.666015625, z: 0.0390625 },
+  { x: 0.666015625, z: 0.9609375 },
+  { x: 0.6953125, z: 0.177734375 },
+  { x: 0.6953125, z: 0.822265625 },
+  { x: 0.69140625, z: 0 },
+  { x: 0.693359375, z: 0.998046875 },
+  { x: 0.75390625, z: 0.24609375 },
+  { x: 0.708984375, z: 0.458984375 },
+  { x: 0.708984375, z: 0.541015625 },
+  { x: 0.75390625, z: 0.75390625 },
+  { x: 0.74609375, z: 0.4609375 },
+  { x: 0.74609375, z: 0.5390625 },
+  { x: 0.76171875, z: 0.4765625 },
+  { x: 0.76171875, z: 0.521484375 },
+  { x: 0.7890625, z: 0.4296875 },
+  { x: 0.7890625, z: 0.5703125 },
+  { x: 0.7734375, z: 0.169921875 },
+  { x: 0.7734375, z: 0.830078125 },
+  { x: 0.822265625, z: 0.3046875 },
+  { x: 0.822265625, z: 0.6953125 },
+  { x: 0.830078125, z: 0.2265625 },
+  { x: 0.830078125, z: 0.7734375 },
+  { x: 0.85546875, z: 0.380859375 },
+  { x: 0.85546875, z: 0.619140625 },
+  { x: 0.958984375, z: 0.0390625 },
+  { x: 0.958984375, z: 0.958984375 },
+  { x: 0.9609375, z: 0.333984375 },
+  { x: 0.9609375, z: 0.666015625 },
+  { x: 0.99609375, z: 0.3046875 },
+  { x: 0.99609375, z: 0.6953125 }
+];
 
-const buddingInRandomTickRange: Record<Point, number> = {};
+const buddingInRandomTickRange: Record<Point, Record<Point, number>> = {};
 const buddingInChunk: Record<Point, number> = {};
 
 function parseRegionFileName(name: string): { x: number, z: number } {
@@ -41,17 +130,33 @@ function chunkAmountToColor(a: number) {
   return `#${str}${str}${str}`;
 }
 
-const afkLog = assertInstanceOf(document.getElementById('afk-spot-log'), HTMLElement);
-const regionFiles = assertInstanceOf(document.getElementById('region-files'), HTMLInputElement);
-regionFiles.addEventListener('change', async () => {
-  const step1Response = assertInstanceOf(document.getElementById('step-1-response'), HTMLDivElement);
-  const step1ResponseBalloon = assertInstanceOf(document.getElementById('step-1-response-balloon'), HTMLDivElement);
-  const step2 = assertInstanceOf(document.getElementById('step-2'), HTMLDivElement);
+const afkLog = $('#afk-spot-log');
+const regionFiles = $('#region-files', HTMLInputElement);
+
+function fileName(file: File | string) {
+  if (typeof file === 'string') {
+    return file.replace(/^.*\/([^/]+)$/, '$1');
+  } else {
+    return file.name;
+  }
+}
+
+function fileSize(file: File | string) {
+  if (typeof file === 'string') {
+    return NaN;
+  } else {
+    return file.size;
+  }
+}
+
+async function processRegionFiles(fileList: Array<File | string>) {
+  const step1Response = $('#step-1-response');
+  const step1ResponseBalloon = $('#step-1-response-balloon');
+  const step2 = $('#step-2');
   step1Response.classList.add('hidden');
   step2.classList.add('hidden');
 
   afkLog.textContent = '';
-  const fileList = Array.from(regionFiles.files ?? []);
   if (fileList.length === 0) {
     return;
   }
@@ -60,15 +165,22 @@ regionFiles.addEventListener('change', async () => {
   step1Response.classList.remove('hidden');
   step2.classList.remove('hidden');
 
-  const mapLabel = assertInstanceOf(document.getElementById('map-label'), HTMLDivElement);
+  const mapLabel = $('#map-label');
   const map = new MapRenderer('#map');
   map.addEventListener('mousemove', (x, z) => {
-    mapLabel.textContent = `x:${x * 16} z:${z * 16} afk:${buddingInRandomTickRange[p(x, 0, z)] ?? '??'} chunk:${buddingInChunk[p(x, 0, z)] ?? '??'}`;
+    const bestForChunk = buddingInRandomTickRange[p(x, 0, z)] ?? {};
+    let best = -1;
+    for (const [, value] of Object.entries(bestForChunk)) {
+      if (value > best) {
+        best = value;
+      }
+    }
+    mapLabel.textContent = `x:${x * 16} z:${z * 16} afk:${best} chunk:${buddingInChunk[p(x, 0, z)] ?? '??'}`;
   });
 
   fileList.sort((aFile, bFile) => {
-    const a = parseRegionFileName(aFile.name);
-    const b = parseRegionFileName(bFile.name);
+    const a = parseRegionFileName(fileName(aFile));
+    const b = parseRegionFileName(fileName(bFile));
     return (a.x * a.x + a.z * a.z) - (b.x * b.x + b.z * b.z);
   });
 
@@ -81,15 +193,18 @@ regionFiles.addEventListener('change', async () => {
   let bestChunkX = 0;
   let bestChunkZ = 0;
   let bestAmount = -1;
-  function recordChunkAmount(x: number, z: number, amount: number) {
+  function recordChunkAmount(x: number, z: number, amount: number, location: Point) {
     const chunk = p(x, 0, z);
-    buddingInRandomTickRange[chunk] = (buddingInRandomTickRange[chunk] ?? 0) + amount;
+    if (!buddingInRandomTickRange[chunk]) {
+      buddingInRandomTickRange[chunk] = {};
+    }
+    buddingInRandomTickRange[chunk][location] = (buddingInRandomTickRange[chunk][location] ?? 0) + amount;
     if (map.getTileColor(x, z) !== 'purple') {
-      const color = chunkAmountToColor(buddingInRandomTickRange[chunk]);
+      const color = chunkAmountToColor(buddingInRandomTickRange[chunk][location]);
       map.setTileColor(x, z, color);
     }
-    if (buddingInRandomTickRange[chunk] > bestAmount) {
-      bestAmount = buddingInRandomTickRange[chunk];
+    if (buddingInRandomTickRange[chunk][location] > bestAmount) {
+      bestAmount = buddingInRandomTickRange[chunk][location];
       bestChunkX = x * 16;
       bestChunkZ = z * 16;
       console.log(`New best ${chunk} ${bestAmount}`);
@@ -100,14 +215,14 @@ regionFiles.addEventListener('change', async () => {
 
   let fileN = 0;
   for (const file of fileList) {
-    log(`Processing ${file.name} (${Math.floor((fileN / fileList.length) * 100)}% overall)\nAFK at x:${bestChunkX} z:${bestChunkZ} to have ${bestAmount} budding amethyst in range.`);
+    log(`Processing ${fileName(file)} (${Math.floor((fileN / fileList.length) * 100)}% overall)\nAFK at x:${bestChunkX} z:${bestChunkZ} to have ${bestAmount} budding amethyst in range.`);
     fileN++;
     try {
-      if (file.size === 0) {
+      if (fileSize(file) === 0) {
         log('  (Skipping empty region)');
         continue;
       }
-      if (!file.name.endsWith('.mca')) {
+      if (!fileName(file).endsWith('.mca')) {
         log('  (Skipping unknown file type)');
       }
 
@@ -126,13 +241,16 @@ regionFiles.addEventListener('change', async () => {
         if (buddingInChunk > 0) {
           for (let zOffset = -8; zOffset <= 8; zOffset++) {
             for (let xOffset = -8; xOffset <= 8; xOffset++) {
-              // for each chunk around this chunk, check if the afk
-              // spot at 0,0 is in random-tick range.
-              const dx = xOffset + 0.5;
-              const dz = zOffset + 0.5;
-              if (dx * dx + dz * dz < 64) {
-                // the afk spot puts this chunk in random tick range.
-                recordChunkAmount(xPos + xOffset, zPos + zOffset, buddingInChunk);
+              // for each chunk around this chunk, check if each AFK
+              // spot in LOCATIONS_TO_SEARCH is in range.
+              for (const { x, z } of [{ x: 0, z: 0 }]) {
+                const dx = xOffset + 0.5 + x;
+                const dz = zOffset + 0.5 + z;
+
+                if (dx * dx + dz * dz < 64) {
+                  // the afk spot puts this chunk in random tick range.
+                  recordChunkAmount(xPos + xOffset, zPos + zOffset, buddingInChunk, p((xPos + xOffset + x) * 16, 0, (zPos + zOffset + z) * 16));
+                }
               }
             }
           }
@@ -143,6 +261,20 @@ regionFiles.addEventListener('change', async () => {
       console.log(e);
     }
   }
-
   log(`Processing finished (100% overall).\nAFK at x:${bestChunkX} z:${bestChunkZ} to have ${bestAmount} budding amethyst in range.`);
+
+}
+
+regionFiles.addEventListener('change', async () => {
+  processRegionFiles(Array.from(regionFiles.files ?? []));
+});
+
+const sample = $('#sample');
+sample.addEventListener('click', () => {
+  processRegionFiles([
+    '../samples/r.0.0.mca',
+    '../samples/r.0.-1.mca',
+    '../samples/r.-1.-1.mca',
+    '../samples/r.-1.0.mca'
+  ]);
 });

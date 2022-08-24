@@ -1,14 +1,14 @@
 import { AnvilParser } from "./anvil";
-import { readFile } from "./file_access";
+import { readFileOrUrl } from "./file_access";
 import { p, Point } from "./point";
 import { runInWorker, WorkerContext } from "./run_in_worker";
 
 export const getBuddingAmethystPerChunk = runInWorker(
   ['general'],
   'budding_chunks',
-  async (context: WorkerContext, regionFile: File) => {
+  async (context: WorkerContext, regionFile: File | string) => {
     const byChunk: Record<Point, number> = {};
-    const fileContents = await readFile(regionFile);
+    const fileContents = await readFileOrUrl(regionFile);
     const parser = new AnvilParser(new DataView(fileContents.buffer));
     for await (const chunk of parser.chunks()) {
       let buddingInChunk = 0;

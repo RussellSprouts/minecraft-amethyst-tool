@@ -34,3 +34,13 @@ export function readFile(file: File): Promise<Uint8Array> {
     reader.readAsArrayBuffer(file);
   });
 }
+
+export async function readFileOrUrl(file: File | string): Promise<Uint8Array> {
+  if (typeof file === 'string') {
+    const response = await fetch(file);
+    const buffer = await response.arrayBuffer();
+    return new Uint8Array(buffer);
+  } else {
+    return readFile(file);
+  }
+}
