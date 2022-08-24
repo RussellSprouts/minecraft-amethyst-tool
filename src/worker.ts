@@ -6,7 +6,13 @@ import { getBuddingAmethystPerChunk } from "./lib/geode_afk_worker";
 import { processRegionFiles } from "./lib/region_files_worker";
 import { WorkerContext, WrappedFunction } from "./lib/run_in_worker";
 
-import './worker_global_scope';
+// Declare globals that are available in a worker.
+declare global {
+  // eslint-disable-next-line no-var
+  var onmessage: ((this: Window, e: MessageEvent) => any) | null;
+  function postMessage(data: any, transfer?: any[]): void;
+  function importScripts(...scripts: string[]): void;
+}
 
 importScripts('../third_party/pako/pako.min.js', './root.js');
 
