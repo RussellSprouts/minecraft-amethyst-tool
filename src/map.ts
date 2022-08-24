@@ -1,7 +1,7 @@
 /** Renders a 2d map */
 
 import { p } from "./point";
-import { assertInstanceOf } from "./util";
+import { $, assertInstanceOf } from "./util";
 
 const CHUNK_SIZE = 32;
 const MIN_SIZE = 4;
@@ -33,7 +33,7 @@ export class MapRenderer {
   ) {
     this.canvas = query instanceof HTMLCanvasElement
       ? query
-      : assertInstanceOf(document.querySelector(query), HTMLCanvasElement);
+      : $(query, HTMLCanvasElement);
     this.context = assertInstanceOf(this.canvas.getContext('2d'), CanvasRenderingContext2D);
     this.getColorIndex(this.defaultColor, true);
 

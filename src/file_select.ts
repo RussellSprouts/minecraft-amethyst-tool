@@ -6,7 +6,7 @@ export function activateFileSelects() {
     const input = assertInstanceOf(el.querySelector('input'), HTMLInputElement);
     const defaultText = span.textContent;
 
-    input.addEventListener('change', (e) => {
+    input.addEventListener('change', () => {
       if (!input.files || input.files.length === 0) {
         span.textContent = defaultText;
       } else if (input.files.length === 1) {

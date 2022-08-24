@@ -4,9 +4,8 @@ import { Point, p, parseP } from './point';
 import { readFile, saveFile } from './file_access';
 import { Renderer } from "./renderer";
 import { expected_shards_per_hour_per_face } from './optimization';
-import { AnvilParser } from './anvil';
 import { Nbt } from "./nbt";
-import { assertInstanceOf, assertNotNull } from "./util";
+import { $, assertInstanceOf, assertNotNull } from "./util";
 import { decompress } from "./compression";
 import { loadEmbeddedSchematics } from "./embedded_schematics";
 import { createNamedWorker } from "./run_in_worker";
@@ -19,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadEmbeddedSchematics();
 });
 
-const regionFilesSelector = assertInstanceOf(document.getElementById('region-files'), HTMLInputElement);
+const regionFilesSelector = $('#region-files', HTMLInputElement);
 regionFilesSelector.addEventListener('change', async () => {
   const progressBar = document.getElementById('region-files-progress') as HTMLInputElement;
   console.log(document.getElementById('region-files-progress'));
@@ -36,7 +35,7 @@ regionFilesSelector.addEventListener('change', async () => {
   }
 });
 
-const fileSelector = assertInstanceOf(document.getElementById('litematic'), HTMLInputElement);
+const fileSelector = $('#litematic', HTMLInputElement);
 fileSelector.addEventListener('change', async () => {
   const fileList = fileSelector.files;
   if (!fileList || fileList.length > 1) {
@@ -53,7 +52,7 @@ fileSelector.addEventListener('change', async () => {
   main(schematic);
 });
 
-const previewSelector = assertInstanceOf(document.getElementById('preview'), HTMLInputElement);
+const previewSelector = $('#preview', HTMLInputElement);
 previewSelector.addEventListener('change', async () => {
   const fileList = previewSelector.files;
   if (!fileList || fileList.length > 1) {
@@ -90,7 +89,7 @@ previewSelector.addEventListener('change', async () => {
   };
 });
 
-const sampleButton = assertInstanceOf(document.getElementById('sample'), HTMLButtonElement);
+const sampleButton = $('#sample', HTMLButtonElement);
 sampleButton.addEventListener('click', async () => {
   const fileContents = new Uint8Array([
     31, 139, 8, 0, 0, 0, 0, 0, 0, 255, 141, 84, 193, 78, 220, 48,
@@ -129,117 +128,7 @@ sampleButton.addEventListener('click', async () => {
   main(schematic);
 });
 
-const afkSpot = assertInstanceOf(document.getElementById('afk'), HTMLInputElement);
-const afkLog = assertInstanceOf(document.getElementById('afk-spot-log'), HTMLElement);
-afkSpot.addEventListener('change', async () => {
-  afkLog.textContent = '';
-  const fileList = Array.from(afkSpot.files ?? []);
-  function log(...values: unknown[]) {
-    console.log(...values);
-    const text = values.map(value => value ? (value as object).toString() : '');
-    afkLog.textContent += text.join('\t') + '\n';
-  }
-
-  log(`Processing ${fileList.length} region files...`);
-
-  // How many budding amethysts we activate from the
-  // center, but just towards the NW (-x, -z) side of the chunk.
-  const chunkAmountsNW: Record<Point, number> = {};
-  const chunkAmountsSW: Record<Point, number> = {};
-  const chunkAmountsNE: Record<Point, number> = {};
-  const chunkAmountsSE: Record<Point, number> = {};
-  const chunkAmountsCorner: Record<Point, number> = {};
-
-  let bestChunk = p(0, 0, 0);
-  let bestAmount = -1;
-  let bestCoords = '';
-  function recordChunkAmount(chunkAmount: Record<Point, number>, chunk: Point, amount: number, coords: string) {
-    chunkAmount[chunk] = (chunkAmount[chunk] ?? 0) + amount;
-    if (chunkAmount[chunk] > bestAmount) {
-      bestAmount = chunkAmount[chunk];
-      bestChunk = chunk;
-      bestCoords = coords;
-    }
-  }
-
-  let fileN = 0;
-  for (const file of fileList) {
-    log(`Processing ${file.name} (${Math.floor((fileN / fileList.length) * 100)}% overall)`);
-    fileN++;
-    try {
-      if (file.size === 0) {
-        log('  (Skipping empty region)');
-        continue;
-      }
-      if (!file.name.endsWith('.mca')) {
-        log('  (Skipping unknown file type)');
-      }
-
-      const fileContents = await readFile(file);
-      const parser = new AnvilParser(new DataView(fileContents.buffer));
-      const chunksWithGeodes = {} as any; // parser.countBlocks('minecraft:budding_amethyst') as any;
-      let total = 0;
-      const chunks = Object.keys(chunksWithGeodes) as Point[];
-      for (const chunk of chunks) {
-        total += chunksWithGeodes[chunk];
-      }
-      log(`  found ${total} budding amethyst blocks across ${chunks.length} chunks`);
-      for (const chunk of Object.keys(chunksWithGeodes) as Point[]) {
-        const [chunkX, , chunkZ] = parseP(chunk);
-
-        const chunkCenterX = chunkX + 0.5;
-        const chunkCenterZ = chunkZ + 0.5;
-        for (let xOffset = -8; xOffset <= 8; xOffset++) {
-          for (let zOffset = -8; zOffset <= 8; zOffset++) {
-            const chunkP = p(chunkX + xOffset, 0, chunkZ + zOffset);
-
-            let dx = xOffset;
-            let dz = zOffset;
-            if (dx * dx + dz * dz < 8 * 8) {
-              recordChunkAmount(chunkAmountsCorner, chunkP, chunksWithGeodes[chunk], '0:0:0');
-            }
-
-            dx = chunkCenterX - (chunkX + xOffset + 0.5 - 0.5 / 16);
-            dz = chunkCenterZ - (chunkZ + zOffset + 0.5 - 0.5 / 16);
-            if (dx * dx + dz * dz < 8 * 8) {
-              recordChunkAmount(chunkAmountsNW, chunkP, chunksWithGeodes[chunk], '7:0:7');
-            }
-
-            dx = chunkCenterX - (chunkX + xOffset + 0.5 - 0.5 / 16);
-            dz = chunkCenterZ - (chunkZ + zOffset + 0.5 + 0.5 / 16);
-            if (dx * dx + dz * dz < 8 * 8) {
-              recordChunkAmount(chunkAmountsSW, chunkP, chunksWithGeodes[chunk], '7:0:8');
-            }
-
-            dx = chunkCenterX - (chunkX + xOffset + 0.5 + 0.5 / 16);
-            dz = chunkCenterZ - (chunkZ + zOffset + 0.5 + 0.5 / 16);
-            if (dx * dx + dz * dz < 8 * 8) {
-              recordChunkAmount(chunkAmountsSE, chunkP, chunksWithGeodes[chunk], '8:0:8');
-            }
-
-            dx = chunkCenterX - (chunkX + xOffset + 0.5 + 0.5 / 16);
-            dz = chunkCenterZ - (chunkZ + zOffset + 0.5 - 0.5 / 16);
-            if (dx * dx + dz * dz < 8 * 8) {
-              recordChunkAmount(chunkAmountsNE, chunkP, chunksWithGeodes[chunk], '8:0:7');
-            }
-          }
-        }
-      }
-      log(`Best so far: ${bestAmount} budding amethyst blocks, from ${bestCoords} in chunk ${bestChunk}`);
-    } catch (e) {
-      log(`Error:`, e);
-      console.log(e);
-    }
-  }
-
-  log(`Best overall: ${bestAmount} budding amethyst blocks, from ${bestCoords} in chunk ${bestChunk}`);
-  const [chunkX, , chunkZ] = parseP(bestChunk);
-  const [offsetX, , offsetZ] = parseP(bestCoords as Point);
-  log(`AFK at the coordinates X:${chunkX * 16 + offsetX}, Z: ${chunkZ * 16 + offsetZ} to have ${bestAmount} blocks in range.`);
-  console.log(chunkAmountsNW);
-});
-
-const nbtPreview = assertInstanceOf(document.getElementById('nbt'), HTMLInputElement);
+const nbtPreview = $('#nbt', HTMLInputElement);
 nbtPreview.addEventListener('change', async () => {
   const fileList = nbtPreview.files ?? [];
   const contents = await readFile(fileList[0]);
@@ -567,9 +456,9 @@ function main(schematic: SchematicReader) {
   ];
 
   console.log('y slime used', y_slime_used);
-  create2dView(assertInstanceOf(document.querySelector('.x-axis'), HTMLElement), x_slime_used, x_slime, x_coords, min_bud_y, max_bud_y, min_bud_z, max_bud_z, (y, z) => p(fx, y, z));
-  create2dView(assertInstanceOf(document.querySelector('.y-axis'), HTMLElement), y_slime_used, y_slime, y_coords, min_bud_x, max_bud_x, min_bud_z, max_bud_z, (x, z) => p(x, fy, z));
-  create2dView(assertInstanceOf(document.querySelector('.z-axis'), HTMLElement), z_slime_used, z_slime, z_coords, min_bud_y, max_bud_y, min_bud_x, max_bud_x, (y, x) => p(x, y, fz));
+  create2dView($('.x-axis'), x_slime_used, x_slime, x_coords, min_bud_y, max_bud_y, min_bud_z, max_bud_z, (y, z) => p(fx, y, z));
+  create2dView($('.y-axis'), y_slime_used, y_slime, y_coords, min_bud_x, max_bud_x, min_bud_z, max_bud_z, (x, z) => p(x, fy, z));
+  create2dView($('.z-axis'), z_slime_used, z_slime, z_coords, min_bud_y, max_bud_y, min_bud_x, max_bud_x, (y, x) => p(x, y, fz));
 
   function create2dView(
     element: HTMLElement,

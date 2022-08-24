@@ -19,6 +19,12 @@
                 "renderer"
             ]
         },
+        "afk": {
+            "entry": "src/afk.ts",
+            "dependencies": [
+                "renderer"
+            ]
+        },
         "worker": {
             "entry": "src/worker.ts",
             "dependencies": [
