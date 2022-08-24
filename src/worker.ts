@@ -2,9 +2,9 @@
  * The entry point for the Web Worker. The root module
  */
 
-import { getBuddingAmethystPerChunk } from "./geode_afk_worker";
-import { processRegionFiles } from "./region_files_worker";
-import { WorkerContext, WrappedFunction } from "./run_in_worker";
+import { getBuddingAmethystPerChunk } from "./lib/geode_afk_worker";
+import { processRegionFiles } from "./lib/region_files_worker";
+import { WorkerContext, WrappedFunction } from "./lib/run_in_worker";
 
 import './worker_global_scope';
 

@@ -1,5 +1,5 @@
 
-import { Virtual3DCanvas } from "../virtual_canvas";
+import { Virtual3DCanvas } from "../lib/virtual_canvas";
 
 describe('Virtual3DCanvas', () => {
   let canvas!: Virtual3DCanvas;

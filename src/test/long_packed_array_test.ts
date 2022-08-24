@@ -1,6 +1,6 @@
 
-import { expandLongPackedArray } from "../long_packed_array";
-import { assertNotNull } from "../util";
+import { expandLongPackedArray } from "../lib/long_packed_array";
+import { assertNotNull } from "../lib/util";
 
 describe('Long packed array', () => {
   it('should expand values', () => {

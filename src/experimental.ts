@@ -1,15 +1,15 @@
-import { SchematicReader } from "./litematic";
-import { IntRange } from "./int_range";
-import { Point, p, parseP } from './point';
-import { readFile, saveFile } from './file_access';
-import { Renderer } from "./renderer";
-import { expected_shards_per_hour_per_face } from './optimization';
-import { Nbt } from "./nbt";
-import { $, assertInstanceOf, assertNotNull } from "./util";
-import { decompress } from "./compression";
-import { loadEmbeddedSchematics } from "./embedded_schematics";
-import { createNamedWorker } from "./run_in_worker";
-import { processRegionFiles } from "./region_files_worker";
+import { SchematicReader } from "./lib/litematic";
+import { IntRange } from "./lib/int_range";
+import { Point, p, parseP } from './lib/point';
+import { readFile, saveFile } from './lib/file_access';
+import { Renderer } from "./lib/renderer";
+import { expected_shards_per_hour_per_face } from './lib/optimization';
+import { Nbt } from "./lib/nbt";
+import { $, assertInstanceOf, assertNotNull } from "./lib/util";
+import { decompress } from "./lib/compression";
+import { loadEmbeddedSchematics } from "./lib/embedded_schematics";
+import { createNamedWorker } from "./lib/run_in_worker";
+import { processRegionFiles } from "./lib/region_files_worker";
 
 createNamedWorker('general');
 createNamedWorker('special');

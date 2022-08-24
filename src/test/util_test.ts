@@ -1,5 +1,5 @@
 
-import { parallelMap } from "../util";
+import { parallelMap } from "../lib/util";
 
 describe('parallelMap', () => {
 

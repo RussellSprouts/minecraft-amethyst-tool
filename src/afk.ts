@@ -1,5 +1,5 @@
-import { MapRenderer } from "./map";
-import { $, assertInstanceOf } from "./util";
+import { MapRenderer } from "./lib/map";
+import { $, assertInstanceOf } from "./lib/util";
 
 const INCREMENTS = 512;
 

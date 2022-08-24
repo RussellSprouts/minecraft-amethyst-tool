@@ -2,13 +2,13 @@
     "modules": {
         "root": "src/root.ts",
         "renderer": {
-            "entry": "src/renderer.ts",
+            "entry": "src/lib/renderer.ts",
             "dependencies": [
                 "root"
             ]
         },
-        "main": {
-            "entry": "src/main.ts",
+        "experimental": {
+            "entry": "src/experimental.ts",
             "dependencies": [
                 "renderer"
             ]

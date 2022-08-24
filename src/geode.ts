@@ -1,10 +1,10 @@
-import { loadEmbeddedSchematics } from "./embedded_schematics";
-import { activateFileSelects } from "./file_select";
-import { getBuddingAmethystPerChunk } from "./geode_afk_worker";
-import { MapRenderer } from "./map";
-import { p, parseP, Point } from "./point";
-import { createNamedWorker } from "./run_in_worker";
-import { $ } from "./util";
+import { loadEmbeddedSchematics } from "./lib/embedded_schematics";
+import { activateFileSelects } from "./lib/file_select";
+import { getBuddingAmethystPerChunk } from "./lib/geode_afk_worker";
+import { MapRenderer } from "./lib/map";
+import { p, parseP, Point } from "./lib/point";
+import { createNamedWorker } from "./lib/run_in_worker";
+import { $ } from "./lib/util";
 
 createNamedWorker('general');
 loadEmbeddedSchematics();
@@ -197,8 +197,6 @@ async function processRegionFiles(fileList: Array<File | string>) {
     afkLog.textContent = text.join('\t') + '\n';
   }
 
-  let bestChunkX = 0;
-  let bestChunkZ = 0;
   let bestAmount = -1;
   let bestChunkLocation = p(0, 0, 0);
   function recordChunkAmount(x: number, z: number, amount: number, location: Point) {
@@ -217,8 +215,6 @@ async function processRegionFiles(fileList: Array<File | string>) {
     }
     if (buddingInRandomTickRange[chunk][location] > bestAmount) {
       bestAmount = buddingInRandomTickRange[chunk][location];
-      bestChunkX = x * 16;
-      bestChunkZ = z * 16;
       bestChunkLocation = location;
       console.log(`New best ${chunk} ${bestAmount} ${bestChunkLocation}`);
     }
