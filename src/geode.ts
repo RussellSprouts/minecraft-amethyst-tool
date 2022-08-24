@@ -277,6 +277,8 @@ async function processRegionFiles(fileList: Array<File | string>) {
   }
 
   const [x, , z] = parseP(bestChunkLocation);
+
+  map.setTileColor(Math.floor(x / 16), Math.floor(z / 16), 'gold');
   log(`Processing finished (100% overall).\nAFK at x:${x.toFixed(2)} z:${z.toFixed(2)} to have ${bestAmount} budding amethyst in range.`);
 
 }
