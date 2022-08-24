@@ -17,6 +17,8 @@ activateFileSelects();
  * For now, just use 0,0.
  */
 const LOCATIONS_TO_SEARCH = [
+  { x: 0, z: 0 },
+  /*
   { x: 0.0390625, z: 0.0390625 },
   { x: 0, z: 0.306640625 },
   { x: 0, z: 0.69140625 },
@@ -105,10 +107,8 @@ const LOCATIONS_TO_SEARCH = [
   { x: 0.9609375, z: 0.666015625 },
   { x: 0.99609375, z: 0.3046875 },
   { x: 0.99609375, z: 0.6953125 }
+  */
 ];
-
-const buddingInRandomTickRange: Record<Point, Record<Point, number>> = {};
-const buddingInChunk: Record<Point, number> = {};
 
 function parseRegionFileName(name: string): { x: number, z: number } {
   const match = name.match(/.*r\.(-?[0-9]+)\.(-?[0-9]+)\.mca$/);
@@ -150,6 +150,10 @@ function fileSize(file: File | string) {
 }
 
 async function processRegionFiles(fileList: Array<File | string>) {
+  const bestBuddingInRandomTickRange: Record<Point, number> = {};
+  const buddingInRandomTickRange: Record<Point, Record<Point, number>> = {};
+  const buddingInChunk: Record<Point, number> = {};
+
   const step1Response = $('#step-1-response');
   const step1ResponseBalloon = $('#step-1-response-balloon');
   const step2 = $('#step-2');
@@ -170,12 +174,15 @@ async function processRegionFiles(fileList: Array<File | string>) {
   map.addEventListener('mousemove', (x, z) => {
     const bestForChunk = buddingInRandomTickRange[p(x, 0, z)] ?? {};
     let best = -1;
-    for (const [, value] of Object.entries(bestForChunk)) {
+    let bestLocation = p(0, 0, 0);
+    for (const [location, value] of Object.entries(bestForChunk)) {
       if (value > best) {
         best = value;
+        bestLocation = location as Point;
       }
     }
-    mapLabel.textContent = `x:${x * 16} z:${z * 16} afk:${best} chunk:${buddingInChunk[p(x, 0, z)] ?? '??'}`;
+    const [bestX, , bestZ] = parseP(bestLocation);
+    mapLabel.textContent = `x:${bestX} z:${bestZ} afk:${best} chunk:${buddingInChunk[p(x, 0, z)] ?? '0'}`;
   });
 
   fileList.sort((aFile, bFile) => {
@@ -193,21 +200,27 @@ async function processRegionFiles(fileList: Array<File | string>) {
   let bestChunkX = 0;
   let bestChunkZ = 0;
   let bestAmount = -1;
+  let bestChunkLocation = p(0, 0, 0);
   function recordChunkAmount(x: number, z: number, amount: number, location: Point) {
     const chunk = p(x, 0, z);
     if (!buddingInRandomTickRange[chunk]) {
       buddingInRandomTickRange[chunk] = {};
     }
     buddingInRandomTickRange[chunk][location] = (buddingInRandomTickRange[chunk][location] ?? 0) + amount;
-    if (map.getTileColor(x, z) !== 'purple') {
-      const color = chunkAmountToColor(buddingInRandomTickRange[chunk][location]);
-      map.setTileColor(x, z, color);
+
+    if (buddingInRandomTickRange[chunk][location] > (bestBuddingInRandomTickRange[chunk] ?? -1)) {
+      bestBuddingInRandomTickRange[chunk] = buddingInRandomTickRange[chunk][location];
+      if (map.getTileColor(x, z) !== 'purple') {
+        const color = chunkAmountToColor(buddingInRandomTickRange[chunk][location]);
+        map.setTileColor(x, z, color);
+      }
     }
     if (buddingInRandomTickRange[chunk][location] > bestAmount) {
       bestAmount = buddingInRandomTickRange[chunk][location];
       bestChunkX = x * 16;
       bestChunkZ = z * 16;
-      console.log(`New best ${chunk} ${bestAmount}`);
+      bestChunkLocation = location;
+      console.log(`New best ${chunk} ${bestAmount} ${bestChunkLocation}`);
     }
   }
 
@@ -215,7 +228,8 @@ async function processRegionFiles(fileList: Array<File | string>) {
 
   let fileN = 0;
   for (const file of fileList) {
-    log(`Processing ${fileName(file)} (${Math.floor((fileN / fileList.length) * 100)}% overall)\nAFK at x:${bestChunkX} z:${bestChunkZ} to have ${bestAmount} budding amethyst in range.`);
+    const [bestAfkX, , bestAfkZ] = parseP(bestChunkLocation);
+    log(`Processing ${fileName(file)} (${Math.floor((fileN / fileList.length) * 100)}% overall)\nAFK at x:${bestAfkX} z:${bestAfkZ} to have ${bestAmount} budding amethyst in range.`);
     fileN++;
     try {
       if (fileSize(file) === 0) {
@@ -229,27 +243,27 @@ async function processRegionFiles(fileList: Array<File | string>) {
       const chunks = await getBuddingAmethystPerChunk(file).promise;
       Object.assign(buddingInChunk, chunks);
 
-      for (const [chunk, buddingInChunk] of Object.entries(chunks)) {
+      for (const [chunk, budding] of Object.entries(chunks)) {
         const [xPos, , zPos] = parseP(chunk as Point);
-        if (buddingInChunk > 0) {
+        if (budding > 0) {
           map.setTileColor(xPos, zPos, 'purple');
         } else if (map.getTileColor(xPos, zPos) === map.defaultColor) {
           map.setTileColor(xPos, zPos, 'aliceblue');
         }
         map.requestRender();
 
-        if (buddingInChunk > 0) {
+        if (budding > 0) {
           for (let zOffset = -8; zOffset <= 8; zOffset++) {
             for (let xOffset = -8; xOffset <= 8; xOffset++) {
               // for each chunk around this chunk, check if each AFK
               // spot in LOCATIONS_TO_SEARCH is in range.
-              for (const { x, z } of [{ x: 0, z: 0 }]) {
+              for (const { x, z } of LOCATIONS_TO_SEARCH) {
                 const dx = xOffset + 0.5 + x;
                 const dz = zOffset + 0.5 + z;
 
                 if (dx * dx + dz * dz < 64) {
                   // the afk spot puts this chunk in random tick range.
-                  recordChunkAmount(xPos + xOffset, zPos + zOffset, buddingInChunk, p((xPos + xOffset + x) * 16, 0, (zPos + zOffset + z) * 16));
+                  recordChunkAmount(xPos + xOffset, zPos + zOffset, budding, p((xPos + xOffset + x) * 16, 0, (zPos + zOffset + z) * 16));
                 }
               }
             }
@@ -261,7 +275,9 @@ async function processRegionFiles(fileList: Array<File | string>) {
       console.log(e);
     }
   }
-  log(`Processing finished (100% overall).\nAFK at x:${bestChunkX} z:${bestChunkZ} to have ${bestAmount} budding amethyst in range.`);
+
+  const [x, , z] = parseP(bestChunkLocation);
+  log(`Processing finished (100% overall).\nAFK at x:${x.toFixed(2)} z:${z.toFixed(2)} to have ${bestAmount} budding amethyst in range.`);
 
 }
 
