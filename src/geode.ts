@@ -10,6 +10,8 @@ enableWorkers();
 loadEmbeddedSchematics();
 activateFileSelects();
 
+console.log("Debugging information:");
+
 /**
  * These 88 locations represent the unique combinations
  * of chunks that can be in random-tick range while standing
