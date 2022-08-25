@@ -11,7 +11,7 @@
     "textures": "node src/lib/textures/generate.js src/lib/textures/index.ts src/lib/textures/textures.json src/lib/textures/all.png src/lib/textures/textures.aseprite",
     "clean": "rm -r out && git checkout -- out/src",
     "templates": "node templates/build.js",
-    "release": "git checkout release && npm run clean && git merge master && npm run build-all && git commit -am 'release' && git push && git checkout master"
+    "release": "git checkout release && git merge master && npm run clean && npm run build-all && git commit -am 'release' && git push && git checkout master"
   },
   "engines": {
     "node": ">=16.16.0"
