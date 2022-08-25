@@ -7,7 +7,7 @@
 </footer>
 <script type="application/russellsprouts-worker"
         data-name="general"
-        src="<%= resource('out/worker.js'); %>&deps=<%= encodeURIComponent(resource('third_party/pako/pako.min.js')) %>,<%= encodeURIComponent(resource('out/root.js')) %>"></script>
+        src="<%= workerResource('out/worker.js', 'third_party/pako/pako.min.js', 'out/root.js'); %>"></script>
 <script type="text/javascript" src="<%= resource('third_party/three.js/three.min.js'); %>"></script>
 <script type="text/javascript" src="<%= resource('third_party/pako/pako.min.js'); %>"></script>
 <script type="text/javascript" src="<%= resource('out/root.js'); %>"></script>

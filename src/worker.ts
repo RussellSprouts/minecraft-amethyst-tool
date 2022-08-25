@@ -11,12 +11,12 @@ declare global {
   function importScripts(...scripts: string[]): void;
 }
 
-// The worker is loaded with a URL parameter like
-// ?deps=dep.js?hash=123abc,dep2.js?hash=321bca.
+// The worker is loaded at a path which includes its dependencies.
+// e.g. worker.abc123.(third_party/pako/pako.min.321cba.js).js
 // Load the js files listed as dependencies.
-const dependencies = new URLSearchParams(location.search).get('deps');
-if (dependencies) {
-  importScripts(...dependencies.split(/,/g).map(s => `../${s}`));
+const params = location.pathname.match(/\((.*)\)/)?.[1].replace(/\$/g, '/');
+if (params) {
+  importScripts(...params.split(/,/g).map(d => `../${d}`));
 }
 
 import { getPatternData } from "./lib/afk_worker";
