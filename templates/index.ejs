@@ -1,13 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Geode AFK Spot Finder</title>
-    <link rel="stylesheet" href="style/main.css">
-    <link rel="stylesheet" href="style/nes.min.css">
-</head>
-<body>
-    <section class="main">
+<% title = "Geode AFK Spot Finder" -%>
+<% entryPoint = "out/geode.js" -%>
+<%- include('include/header'); -%>
 <h1>Geode AFK Spot Finder</h1>
 <p>Finds the spot with the most budding amethyst blocks in range.</p>
 <div>
@@ -34,17 +27,4 @@
         <canvas id="map" width="512" height="512"></canvas>
     </div>
 </div>
-</section>
-<footer>
-    <div class="nes-container with-title">
-        <p class="title">Other tools</p>
-        <p><a href="index.html">geode</a> &mdash; <a href="afk.html">afk</a></p>
-    </div>
-</footer>
-<script type="text/javascript" src="third_party/three.js/three.min.js"></script>
-<script type="text/javascript" src="third_party/pako/pako.min.js"></script>
-<script type="text/javascript" src="out/root.js"></script>
-<script type="text/javascript" src="out/renderer.js"></script>
-<script type="text/javascript" src="out/geode.js"></script>
-</body>
-</html>
+<%- include('include/footer'); -%>

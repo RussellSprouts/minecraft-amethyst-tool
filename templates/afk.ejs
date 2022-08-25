@@ -1,0 +1,18 @@
+<% title = "Where to AFK in a chunk" -%>
+<% entryPoint = "out/afk.js" -%>
+<%- include('include/header'); -%>
+<h1>Where to AFK in a chunk</h1>
+<p>Depending on where you stand, different chunks will be in random-tick range.</p>
+<p>The chunk corners load the most chunks, but for geode farms, you may have more geodes in range with a different spot.</p>
+<p>The colored regions are the spots that have unique chunk combinations loaded.</p>
+<p>The geode finder will only check 0,0 in each chunk.</p>
+<div>
+    <p id="loading">Loading...</p>
+    <div>
+        <p id="hoverInfo">&nbsp;</p>
+        <canvas style="width:48%;display:inline" id="chunkPattern" width="512" height="512"></canvas>
+        <canvas style="width:48%;display:inline" id="chunkPatternMap" width="512" height="512"></canvas>
+    </div>
+    <div id="patternLog"></div>
+</div>
+<%- include('include/footer'); -%>

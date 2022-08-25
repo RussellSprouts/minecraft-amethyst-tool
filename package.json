@@ -6,9 +6,10 @@
   "scripts": {
     "build": "tscc",
     "test": "ts-node node_modules/jasmine/bin/jasmine --config=jasmine.json",
-    "watch": "nodemon -e ts -x npm run build & nodemon -e aseprite -x npm run textures",
+    "watch": "nodemon -e ts -x npm run build & nodemon -e aseprite -x npm run textures & nodemon -e ejs -x npm run templates",
     "textures": "node src/lib/textures/generate.js src/lib/textures/index.ts src/lib/textures/textures.json src/lib/textures/all.png src/lib/textures/textures.aseprite",
-    "clean": "rm -r out && git checkout -- out/src"
+    "clean": "rm -r out && git checkout -- out/src",
+    "templates": "node templates/build.js"
   },
   "engines": {
     "node": ">=16.16.0"
@@ -24,6 +25,7 @@
     "@types/three": "^0.132.2",
     "@typescript-eslint/eslint-plugin": "^5.30.4",
     "aseprite-cli": "^1.1.2",
+    "ejs": "^3.1.8",
     "eslint": "^8.19.0",
     "jasmine": "^4.0.2",
     "nodemon": "^2.0.13",
