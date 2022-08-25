@@ -1,0 +1,177 @@
+* {
+    box-sizing: border-box;
+}
+
+/* press-start-2p-regular - latin */
+@font-face {
+    font-family: 'Press Start 2P';
+    font-style: normal;
+    font-weight: 400;
+    src: local(''),
+        url('../fonts/press-start-2p-v14-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+        url('../fonts/press-start-2p-v14-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+
+
+html,
+body {
+    padding: 0;
+    margin: 0;
+    font-family: 'Press Start 2P';
+    color: #333;
+    line-height: 24px;
+    font-size: 16px;
+}
+
+.button-like {
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+object {
+    display: block;
+}
+
+object canvas {
+    cursor: move;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+}
+
+p {
+    margin: 1.5em 0 1.5em 0;
+}
+
+h1 {
+    font-size: 3.3125em;
+    /* 53px */
+    line-height: 1.3585em;
+    /* 72px */
+    margin-top: 0.4528em;
+    margin-bottom: 0;
+    font-weight: 600;
+}
+
+h2 {
+    font-size: 2.6250em;
+    /* 42px */
+    line-height: 1.1429em;
+    /* 48px */
+    margin-top: 0.5714em;
+    margin-bottom: 0;
+    font-weight: 600;
+}
+
+h3 {
+    font-size: 2.0625em;
+    /* 33px */
+    line-height: 1.4545em;
+    /* 48px */
+    margin-top: 0.7273em;
+    margin-bottom: 0.0000em;
+    font-weight: 600;
+}
+
+h4 {
+    font-size: 1.6250em;
+    /* 26px */
+    line-height: 1.8462em;
+    /* 48px */
+    margin-top: 0.9231em;
+    margin-bottom: 0.0000em;
+    font-weight: 600;
+}
+
+
+.main>*, footer {
+    max-width: 44rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.main {
+    min-height: calc(100vh - 7em);
+    margin-top: 1em;
+}
+
+footer {
+    height: 6em;
+}
+
+.block {
+    display: block;
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+    font-family: sans-serif;
+}
+
+.amethyst {
+    background-color: #21002e;
+    border: none !important;
+}
+
+.slime {
+    background-color: #0D0;
+}
+
+.extra-slime,
+.optional-slime {
+    background-color: #8F8;
+}
+
+.regular,
+.optional-regular {
+    background-color: #999;
+}
+
+.air,
+.optional-air {
+    background-color: white;
+    border: none !important;
+}
+
+.grid {
+    font-size: 16px;
+    vertical-align: middle;
+    position: relative;
+}
+
+.invalid {
+    color: red;
+    font-weight: bold;
+}
+
+.regular.invalid {
+    background-color: #800;
+}
+
+#afk-spot-log {
+    max-height: 20em;
+}
+
+.revealer {
+    width: 100%;
+}
+
+.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.step {
+    transition: opacity 2s ease-in-out;
+    opacity: 1;
+}
+
+.from-right {
+    float: right;
+}
+
+#afk-spot-log {
+    white-space: pre-wrap;
+}
