@@ -1,3 +1,5 @@
+import { assertInstanceOf, assertNotNull } from "./util";
+
 export interface WrappedFunction<R extends Promise<any>, A extends any[]> {
   (...args: A): { promise: R, progress: EventTarget };
   original: (context: WorkerContext, ...args: A) => R;
@@ -32,12 +34,23 @@ export function registerWorkerListener(worker: Worker) {
   };
 }
 
-export function createNamedWorker(name: string) {
-  const worker = new Worker('out/worker.js');
+export function enableWorkers() {
+  const workers = document.querySelectorAll('script[type="application/russellsprouts-worker"]');
+  for (const worker of workers) {
+    const elt = assertInstanceOf(worker, HTMLScriptElement);
+    createNamedWorker(
+      assertNotNull(elt.dataset['name']),
+      assertNotNull(elt.getAttribute('src')));
+  }
+}
+
+export function createNamedWorker(name: string, src: string) {
+  console.log("Creating named worker", name, src);
+  const worker = new Worker(src);
   worker.postMessage({
     event: 'init-worker',
     value: {
-      name
+      'name': name
     }
   });
   for (const [otherWorkerName, otherWorker] of workers.entries()) {

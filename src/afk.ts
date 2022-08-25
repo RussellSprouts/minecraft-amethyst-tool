@@ -1,10 +1,10 @@
 import { getPatternData } from "./lib/afk_worker";
 import { MapRenderer } from "./lib/map";
-import { createNamedWorker } from "./lib/run_in_worker";
+import { enableWorkers } from "./lib/run_in_worker";
 import { $, assertInstanceOf } from "./lib/util";
 
 async function main() {
-  createNamedWorker('general');
+  enableWorkers();
 
   const INCREMENTS = 512;
 

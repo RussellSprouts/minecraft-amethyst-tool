@@ -3,10 +3,10 @@ import { activateFileSelects } from "./lib/file_select";
 import { getBuddingAmethystPerChunk } from "./lib/geode_afk_worker";
 import { MapRenderer } from "./lib/map";
 import { p, parseP, Point } from "./lib/point";
-import { createNamedWorker } from "./lib/run_in_worker";
+import { enableWorkers } from "./lib/run_in_worker";
 import { $ } from "./lib/util";
 
-createNamedWorker('general');
+enableWorkers();
 loadEmbeddedSchematics();
 activateFileSelects();
 

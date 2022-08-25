@@ -8,11 +8,10 @@ import { Nbt } from "./lib/nbt";
 import { $, assertInstanceOf, assertNotNull } from "./lib/util";
 import { decompress } from "./lib/compression";
 import { loadEmbeddedSchematics } from "./lib/embedded_schematics";
-import { createNamedWorker } from "./lib/run_in_worker";
+import { enableWorkers } from "./lib/run_in_worker";
 import { processRegionFiles } from "./lib/region_files_worker";
 
-createNamedWorker('general');
-createNamedWorker('special');
+enableWorkers();
 
 document.addEventListener('DOMContentLoaded', () => {
   loadEmbeddedSchematics();

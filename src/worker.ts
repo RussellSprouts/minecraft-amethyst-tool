@@ -1,11 +1,7 @@
 /**
- * The entry point for the Web Worker. The root module
+ * The entry point for the Web Worker. We use the location to pass
+ * the list of dependencies with cache-busting hashes.
  */
-
-import { getPatternData } from "./lib/afk_worker";
-import { getBuddingAmethystPerChunk } from "./lib/geode_afk_worker";
-import { processRegionFiles } from "./lib/region_files_worker";
-import { WorkerContext, WrappedFunction } from "./lib/run_in_worker";
 
 // Declare globals that are available in a worker.
 declare global {
@@ -15,7 +11,18 @@ declare global {
   function importScripts(...scripts: string[]): void;
 }
 
-importScripts('../third_party/pako/pako.min.js', './root.js');
+// The worker is loaded with a URL parameter like
+// ?deps=dep.js?hash=123abc,dep2.js?hash=321bca.
+// Load the js files listed as dependencies.
+const dependencies = new URLSearchParams(location.search).get('deps');
+if (dependencies) {
+  importScripts(...dependencies.split(/,/g).map(s => `../${s}`));
+}
+
+import { getPatternData } from "./lib/afk_worker";
+import { getBuddingAmethystPerChunk } from "./lib/geode_afk_worker";
+import { processRegionFiles } from "./lib/region_files_worker";
+import { WorkerContext, WrappedFunction } from "./lib/run_in_worker";
 
 const handlers = new Map<string, WrappedFunction<any, any>>();
 
@@ -32,8 +39,6 @@ registerFunction(getPatternData);
 let workerName = '';
 const workers = new Map<string, MessagePort>();
 async function handleMessage(e: MessageEvent) {
-  console.log('handling remote call', e.data, typeof importScripts);
-
   if (e.data.event === 'init-worker') {
     workerName = e.data.value.name;
     console.log(`I'm the worker ${workerName}.`);
