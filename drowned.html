@@ -2,17 +2,20 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Geode AFK Spot Finder</title>
+    <title>Drowned AFK Spot Finder</title>
     <link rel="stylesheet" href="style/main@927b414d2f.css">
     <link rel="stylesheet" href="style/nes.min@c0b52769a4.css">
 </head>
 <body>
     <section class="main">
-<h1>Geode AFK Spot Finder</h1>
-<p>Finds the spot with the most budding amethyst blocks in range.</p>
+<h1>Drowned AFK Spot</h1>
 <div>
     <div id="step-1-balloon" class="nes-balloon from-left">
         Load all .mca files in your world's region folder.
+        <div class="nes-field">
+            <label for="seed">Seed</label>
+            <input type="text" id="seed" class="nes-input">
+        </div>
         <p>
             <label id="region-files-container" class="nes-btn file-select">
                 <span>Select your files</span>
@@ -22,16 +25,11 @@
         </p>
         <small>Your files are never uploaded &mdash; everything is processed in your browser.</small>
     </div>
-</div>
-<div id="step-1-response" class="step hidden">
-    <div id="step-1-response-balloon" style="float:right;" class="nes-balloon from-right">
-    </div>
-</div>
-<div id="step-2" class="step hidden">
-    <div class="nes-balloon from-left" style="width: 100%">
-        <div id="afk-spot-log"></div>
-        <div style="white-space: pre-wrap;" id="map-label"></div>
+    <div>
+        <div id="message"></div>
+        <div id="hover"></div>
         <canvas id="map" width="512" height="512"></canvas>
+        <canvas id="map2" width="512" height="512"></canvas>
     </div>
 </div>
 </section>
@@ -48,6 +46,6 @@
 <script type="text/javascript" src="third_party/pako/pako.min@83a0cef96b.js"></script>
 <script type="text/javascript" src="out/root@e0a3106c97.js"></script>
 <script type="text/javascript" src="out/renderer@6f45921feb.js"></script>
-<script type="text/javascript" src="out/geode@e44076d918.js"></script>
+<script type="text/javascript" src="out/drowned@2eb6ed2268.js"></script>
 </body>
 </html>

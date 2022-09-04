@@ -1,18 +1,20 @@
 /** Renders a 2d map */
 
-import { p } from "./point";
+import { p, Point } from "./point";
 import { $, assertInstanceOf } from "./util";
 
 const CHUNK_SIZE = 32;
-const MIN_SIZE = 4;
+const CHUNK_MASK = CHUNK_SIZE - 1;
+
 export class MapRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
-  private tileMap: Record<string, Uint16Array> = {};
-  private listeners: Record<string, Array<(x: number, z: number) => void>> = {
-    'click': [],
-    'mousemove': []
-  };
+  private tileMap1: Record<Point, Uint16Array> = {};
+  private tileMap4: Record<Point, Uint16Array> = {};
+  private tileMap16: Record<Point, Uint16Array> = {};
+  private overlay: Record<Point, Uint16Array> = {};
+
+  private lod: 1 | 4 | 16 = 1;
 
   private colorIndices: Record<string, number> = {};
   private colors: string[] = [];
@@ -26,6 +28,10 @@ export class MapRenderer {
   private scrolling = false;
 
   private renderRequested = false;
+
+  setLod(level: 1 | 4 | 16) {
+    this.lod = level;
+  }
 
   constructor(
     query: string | HTMLCanvasElement,
@@ -46,7 +52,6 @@ export class MapRenderer {
         this.scrolling = false;
         this.centerX -= e.movementX;
         this.centerZ -= e.movementY;
-        console.log(e.movementX, e.movementY);
         this.requestRender();
       }
     }, { passive: true });
@@ -59,10 +64,30 @@ export class MapRenderer {
       const oldPxX = (oldBounds.left + e.clientX - canvasBounds.left) / this.tileSize;
       const oldPxZ = (oldBounds.top + e.clientY - canvasBounds.top) / this.tileSize;
 
-      this.tileSize -= Math.sign(e.deltaY);
-      if (this.tileSize < MIN_SIZE) {
-        this.tileSize = MIN_SIZE;
+      this.tileSize -= Math.sign(e.deltaY) / this.lod;
+      if (this.lod === 1) {
+        if (this.tileSize < 4) {
+          this.tileSize = 4;
+          this.setLod(4);
+        }
+      } else if (this.lod === 4) {
+        if (this.tileSize < 1) {
+          this.setLod(16);
+          this.tileSize = 1;
+        } else if (this.tileSize > 4) {
+          this.setLod(1);
+          this.tileSize = Math.round(this.tileSize);
+        }
+      } else if (this.lod === 16) {
+        if (this.tileSize < 0.25) {
+          this.tileSize = 0.25;
+        } else if (this.tileSize >= 1) {
+          this.setLod(4);
+          this.tileSize = Math.round(this.tileSize * 4) / 4;
+        }
       }
+
+      console.log('lod', this.lod, this.tileSize);
 
       const newBounds = this.getBounds();
       const newPxX = (newBounds.left + e.clientX - canvasBounds.left) / this.tileSize;
@@ -104,15 +129,16 @@ export class MapRenderer {
     }
   }
 
-  getTileMapAtCoords(x: number, z: number, create: false): Uint16Array | undefined;
-  getTileMapAtCoords(x: number, z: number, create: true): Uint16Array;
-  getTileMapAtCoords(x: number, z: number, create = false): Uint16Array | undefined {
+  getTileMapAtCoords(x: number, z: number, create: false, lod: 1 | 4 | 16): Uint16Array | undefined;
+  getTileMapAtCoords(x: number, z: number, create: true, lod: 1 | 4 | 16): Uint16Array;
+  getTileMapAtCoords(x: number, z: number, create = false, lod: 1 | 4 | 16): Uint16Array | undefined {
     const tileMapX = Math.floor(x / CHUNK_SIZE);
     const tileMapZ = Math.floor(z / CHUNK_SIZE);
     const tileMapPoint = p(tileMapX, 0, tileMapZ);
-    const result = this.tileMap[tileMapPoint];
+    const tileMap = lod === 1 ? this.tileMap1 : lod === 4 ? this.tileMap4 : this.tileMap16;
+    const result = tileMap[tileMapPoint];
     if (!result && create) {
-      return (this.tileMap[tileMapPoint] = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE));
+      return (tileMap[tileMapPoint] = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE));
     }
     return result;
   }
@@ -128,22 +154,36 @@ export class MapRenderer {
     return result ?? 0;
   }
 
-  setTileColor(x: number, z: number, color: string) {
-    const map = this.getTileMapAtCoords(x, z, true);
-    x = ((x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    z = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  setTileColor(x: number, z: number, color: string, lod: 1 | 4 | 16 = 1) {
+    x = Math.floor(x / lod);
+    z = Math.floor(z / lod);
+    const map = this.getTileMapAtCoords(x, z, true, lod);
+    x = x & CHUNK_MASK;
+    z = z & CHUNK_MASK;
 
     map[x + z * CHUNK_SIZE] = this.getColorIndex(color, true);
   }
 
-  getTileColor(x: number, z: number): string {
-    const map = this.getTileMapAtCoords(x, z, true);
+  setOverlayColor(x: number, z: number, color: string, lod: 1 | 4 | 16) {
+    x = Math.floor(x / lod);
+    z = Math.floor(z / lod);
+
+  }
+
+  getTileColor(ox: number, oz: number, lod: 1 | 4 | 16 = 1): string {
+    let x = Math.floor(ox / lod);
+    let z = Math.floor(oz / lod);
+    const map = this.getTileMapAtCoords(x, z, true, lod);
     if (!map) {
       return this.defaultColor;
     }
-    x = ((x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    z = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    x = x & CHUNK_MASK;
+    z = z & CHUNK_MASK;
     const colorIndex = map[x + z * CHUNK_SIZE];
+    if (colorIndex === 0 && lod !== 16) {
+      const result = this.getTileColor(ox, oz, (lod * 4) as (4 | 16));
+      return result;
+    }
     return this.colors[colorIndex] ?? this.defaultColor;
   }
 
@@ -156,9 +196,9 @@ export class MapRenderer {
     const canvasCenterZ = this.canvas.height / 2;
 
     const left = this.centerX - canvasCenterX;
-    const right = this.centerX + canvasCenterX + this.tileSize;
+    const right = this.centerX + canvasCenterX + this.tileSize * this.lod;
     const top = this.centerZ - canvasCenterZ;
-    const bottom = this.centerZ + canvasCenterZ + this.tileSize;
+    const bottom = this.centerZ + canvasCenterZ + this.tileSize * this.lod;
     return { left, right, top, bottom };
   }
 
@@ -168,17 +208,17 @@ export class MapRenderer {
     // canvas center is centerX
     const { left, right, top, bottom } = this.getBounds();
 
-    for (let j = top; j < bottom; j += this.tileSize) {
-      for (let i = left; i < right; i += this.tileSize) {
-        const tileX = Math.floor(i / this.tileSize);
-        const tileZ = Math.floor(j / this.tileSize);
+    for (let j = top; j < bottom; j += this.tileSize * this.lod) {
+      for (let i = left; i < right; i += this.tileSize * this.lod) {
+        const tileX = Math.floor(i / this.tileSize / this.lod);
+        const tileZ = Math.floor(j / this.tileSize / this.lod);
         this.context.fillStyle =
-          this.getTileColor(tileX, tileZ);
+          this.getTileColor(tileX * this.lod, tileZ * this.lod, this.lod);
         this.context.fillRect(
-          Math.floor(tileX * this.tileSize - left),
-          Math.floor(tileZ * this.tileSize - top),
-          this.tileSize,
-          this.tileSize
+          Math.floor(tileX * this.tileSize * this.lod - left),
+          Math.floor(tileZ * this.tileSize * this.lod - top),
+          this.tileSize * this.lod,
+          this.tileSize * this.lod
         );
       }
     }

@@ -1,4 +1,5 @@
 import { loadEmbeddedSchematics } from "./lib/embedded_schematics";
+import { fileName, fileSize, sortFilesByDistance } from "./lib/file_access";
 import { activateFileSelects } from "./lib/file_select";
 import { getBuddingAmethystPerChunk } from "./lib/geode_afk_worker";
 import { MapRenderer } from "./lib/map";
@@ -112,17 +113,6 @@ const LOCATIONS_TO_SEARCH = [
   */
 ];
 
-function parseRegionFileName(name: string): { x: number, z: number } {
-  const match = name.match(/.*r\.(-?[0-9]+)\.(-?[0-9]+)\.mca$/);
-  if (!match) {
-    return { x: Infinity, z: Infinity };
-  }
-  return {
-    x: parseInt(match[1]),
-    z: parseInt(match[2])
-  };
-}
-
 const COLOR_RANGE_MAX = 1000;
 function chunkAmountToColor(a: number) {
   const ratio = Math.floor(256 * (1 - a / COLOR_RANGE_MAX));
@@ -134,22 +124,6 @@ function chunkAmountToColor(a: number) {
 
 const afkLog = $('#afk-spot-log');
 const regionFiles = $('#region-files', HTMLInputElement);
-
-function fileName(file: File | string) {
-  if (typeof file === 'string') {
-    return file.replace(/^.*\/([^/]+)$/, '$1');
-  } else {
-    return file.name;
-  }
-}
-
-function fileSize(file: File | string) {
-  if (typeof file === 'string') {
-    return NaN;
-  } else {
-    return file.size;
-  }
-}
 
 async function processRegionFiles(fileList: Array<File | string>) {
   const bestBuddingInRandomTickRange: Record<Point, number> = {};
@@ -187,11 +161,7 @@ async function processRegionFiles(fileList: Array<File | string>) {
     mapLabel.textContent = `x:${bestX} z:${bestZ} afk:${best} chunk:${buddingInChunk[p(x, 0, z)] ?? '0'}`;
   });
 
-  fileList.sort((aFile, bFile) => {
-    const a = parseRegionFileName(fileName(aFile));
-    const b = parseRegionFileName(fileName(bFile));
-    return (a.x * a.x + a.z * a.z) - (b.x * b.x + b.z * b.z);
-  });
+  sortFilesByDistance(fileList);
 
   function log(...values: unknown[]) {
     console.log(...values);

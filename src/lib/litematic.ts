@@ -83,8 +83,13 @@ function bitsForBlockStates(nPaletteEntries: number): number {
  * Keeps track of the palette assignments.
  */
 export class PaletteManager {
-  private readonly palette: { [blockState: string]: number } = { 'minecraft:air': 0 };
-  private readonly paletteList = ['minecraft:air'];
+  constructor(empty = 'minecraft:air') {
+    this.palette = { [empty]: 0 };
+    this.paletteList = [empty];
+  }
+
+  private readonly palette: { [blockState: string]: number };
+  private readonly paletteList: string[];
 
   getOrCreatePaletteIndex(blockState: string) {
     if (this.palette[blockState] !== undefined) {

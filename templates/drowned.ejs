@@ -1,0 +1,28 @@
+<% title = "Drowned AFK Spot Finder" -%>
+<% entryPoint = "out/drowned.js" -%>
+<%- include('include/header'); -%>
+<h1>Drowned AFK Spot</h1>
+<div>
+    <div id="step-1-balloon" class="nes-balloon from-left">
+        Load all .mca files in your world's region folder.
+        <div class="nes-field">
+            <label for="seed">Seed</label>
+            <input type="text" id="seed" class="nes-input">
+        </div>
+        <p>
+            <label id="region-files-container" class="nes-btn file-select">
+                <span>Select your files</span>
+                <input id="region-files" type="file" multiple>
+            </label>
+            <button id="sample" class="nes-btn">Load Sample</button>
+        </p>
+        <small>Your files are never uploaded &mdash; everything is processed in your browser.</small>
+    </div>
+    <div>
+        <div id="message"></div>
+        <div id="hover"></div>
+        <canvas id="map" width="512" height="512"></canvas>
+        <canvas id="map2" width="512" height="512"></canvas>
+    </div>
+</div>
+<%- include('include/footer'); -%>

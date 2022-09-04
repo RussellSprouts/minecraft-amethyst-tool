@@ -25,6 +25,12 @@
                 "renderer"
             ]
         },
+        "drowned": {
+            "entry": "src/drowned.ts",
+            "dependencies": [
+                "renderer"
+            ]
+        },
         "worker": {
             "entry": "src/worker.ts",
             "dependencies": [
