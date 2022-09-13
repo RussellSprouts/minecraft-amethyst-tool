@@ -3,49 +3,128 @@
 <head>
     <meta charset="utf-8">
     <title>Drowned AFK Spot Finder</title>
-    <link rel="stylesheet" href="style/main@927b414d2f.css">
+    <link rel="stylesheet" href="style/main@da4ade84db.css">
     <link rel="stylesheet" href="style/nes.min@c0b52769a4.css">
 </head>
 <body>
     <section class="main">
 <h1>Drowned AFK Spot</h1>
 <div>
-    <div id="step-1-balloon" class="nes-balloon from-left">
-        Load all .mca files in your world's region folder.
-        <div class="nes-field">
-            <label for="seed">Seed</label>
-            <input type="text" id="seed" class="nes-input">
+    <div class="step" data-step="1">
+        <div class="nes-balloon from-left">
+            <p>Let's find the spot in your world with the most river biome blocks nearby.</p>
+            <p>This is the best spot for a giant drowned/trident farm.</p>
+            <p>Enter your world seed. This is used to calculate the biome noise.</p>
         </div>
-        <p>
-            <label id="region-files-container" class="nes-btn file-select">
-                <span>Select your files</span>
-                <input id="region-files" type="file" multiple>
-            </label>
-            <button id="sample" class="nes-btn">Load Sample</button>
-        </p>
-        <small>Your files are never uploaded &mdash; everything is processed in your browser.</small>
+        <div class="nes-balloon from-right">
+            <form id="seed-form">
+                <div class="nes-field">
+                    <label for="seed">My seed is</label>
+                    <input type="text" id="seed" name="seed" class="nes-input" required placeholder="-123456789">
+                </div>
+                <button class="nes-btn is-primary" type="submit">Enter</button>
+            </form> 
+        </div>
     </div>
-    <div>
-        <div id="message"></div>
-        <div id="hover"></div>
-        <canvas id="map" width="512" height="512"></canvas>
-        <canvas id="map2" width="512" height="512"></canvas>
+    <div class="step hidden" data-step="2">
+        <div class="nes-balloon from-left">
+            <p>Load all .mca files in your world's region folder.</p>
+            <p>These have the 3D biome data which we will use to find rivers.</p>
+            <p><small>Your files are never uploaded &mdash; everything is processed in your browser.</small></p>
+        </div>
+        <div class="nes-balloon from-right">
+            <form id="region-files-form">
+                <label id="region-files-container" class="nes-btn file-select" data-warning="file-select-warning">
+                    <span>Select files</span>
+                    <input id="region-files" type="file" multiple required>
+                </label>
+                <p id="file-select-warning" class="hidden">
+                    <small>It may take a moment for a large number of files to load...</small>
+                </p>
+                <button class="nes-btn is-primary" type="submit">Enter</button>
+            </form>
+            <label>
+                <input type="checkbox" class="nes-checkbox hiding-checkbox" data-for="advanced-controls" checked />
+                <span>Advanced</span>
+            </label>
+            <div id="advanced-controls" class="hidden nes-container">
+                <div class="nes-container with-title with-margin">
+                    <p class="title">Within radius</p>
+                    <div class="nes-field is-inline">
+                        <label for="search-radius">r</label>
+                        <input type="text" id="search-radius" class="nes-input" placeholder="Infinity">
+                    </div>
+                    <div class="nes-field is-inline">
+                        <label for="search-center-x">x</label>
+                        <input type="text" id="search-center-x" class="nes-input" placeholder="0">
+                    </div>
+                    <div class="nes-field is-inline">
+                        <label for="search-center-x">z</label>
+                        <input type="text" id="search-center-z" class="nes-input" placeholder="0">
+                    </div>
+                </div>
+                <div class="nes-container with-title with-margin">
+                    <p class="title">Navigate</p>
+                    <div class="nes-field is-inline">
+                        <label for="navigate-to-x">x</label>
+                        <input type="text" id="navigate-to-x" class="nes-input" placeholder="0">
+                    </div>
+                    <div class="nes-field is-inline with-margin">
+                        <label for="navigate-to-z">z</label>
+                        <input type="text" id="navigate-to-z" class="nes-input" placeholder="0">
+                    </div>
+                    <p><small>Scroll to the specified coordinates</small></p>
+                    <button class="nes-btn is-success">Go</button>
+                </div>
+                <div class="nes-container">
+                    <button id="cancel-button" class="nes-btn is-error">Start search now</button>
+                    <p><small>Stop loading region files and start searching in the currently loaded area.</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="step hidden" data-step="3">
+        <div class="nes-balloon from-left">
+            <div id="message" class="pre-wrap"></div>
+            <div id="hover" class="pre-wrap"></div>
+            <canvas id="map" class="with-margin" width="512" height="512"></canvas>
+            <div class="nes-container with-title">
+                <p class="title">Key</p>
+                <p>Processed from y:-64 to 64</p>
+                <ul>
+                    <li><span style="color:blue">blue</span> - all river biome</li>
+                    <li><span style="color:red">red</span> - some cave biome</li>
+                    <li><span style="color:#009">dark blue</span> - some river biome, no cave</li>
+                    <li><span style="color:green">green</span> - other</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="step hidden" data-step="4">
+        <div class="nes-balloon from-left" style="width:100%">
+            <p>Processing finished. There are xxx river biome columns around x:xxx z:xxx.</p>
+            <button class="nes-btn">Save schematic</button>
+        </div>
     </div>
 </div>
 </section>
 <footer>
     <div class="nes-container with-title">
         <p class="title">Other tools</p>
-        <p><a href="index.html">geode</a> &mdash; <a href="afk.html">afk</a></p>
+        <p>
+            <a href="index.html">geode</a> 
+            &mdash; <a href="afk.html">afk</a>
+            &mdash; <a href="drowned.html">drowned</a>
+        </p>
     </div>
 </footer>
 <script type="application/russellsprouts-worker"
         data-name="general"
-        src="out/worker@6b0e9178ab.(third_party$pako$pako.min@83a0cef96b.js,out$root@e0a3106c97.js).js"></script>
+        src="out/worker@cba4d80e9e.(third_party$pako$pako.min@83a0cef96b.js,out$root@249c2aa625.js,out$assembly@145f29501b.wasm).js"></script>
 <script type="text/javascript" src="third_party/three.js/three.min@9eed40c528.js"></script>
 <script type="text/javascript" src="third_party/pako/pako.min@83a0cef96b.js"></script>
-<script type="text/javascript" src="out/root@e0a3106c97.js"></script>
-<script type="text/javascript" src="out/renderer@6f45921feb.js"></script>
-<script type="text/javascript" src="out/drowned@2eb6ed2268.js"></script>
+<script type="text/javascript" src="out/root@249c2aa625.js"></script>
+<script type="text/javascript" src="out/renderer@713afc11e0.js"></script>
+<script type="text/javascript" src="out/drowned@175ca177ce.js"></script>
 </body>
 </html>

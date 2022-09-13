@@ -175,3 +175,22 @@ footer {
 #afk-spot-log {
     white-space: pre-wrap;
 }
+
+.pre-wrap {
+    white-space: pre-wrap;
+}
+
+.with-margin {
+    margin-bottom: 1em;
+}
+
+footer::before {
+    clear: both;
+    display: block;
+    content: ' ';
+    height: 1em;
+}
+
+footer {
+    clear: both;
+}

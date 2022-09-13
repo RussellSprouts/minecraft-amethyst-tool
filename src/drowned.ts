@@ -23,72 +23,106 @@
  *    away are spawnable. Maximize that number.
  */
 
-import { AnvilParser } from "./lib/anvil";
-import { getBiomeSourceQuart } from "./lib/biome_source_quart";
-import { processRegionFilesForDrownedFarm } from "./lib/drowned_worker";
-import { PaletteManager } from "./lib/litematic";
+import { cancelWorldLoading, processRegionFilesForDrownedFarm } from "./lib/drowned_worker";
 import { MapRenderer } from "./lib/map";
 import { enableWorkers } from "./lib/run_in_worker";
 import { Seed } from "./lib/seed";
-import { $ } from './lib/util';
-import { Virtual2DSet, Virtual3DCanvas, Virtual3DSet } from "./lib/virtual_canvas";
+import { $, assertInstanceOf, assertNotNull } from './lib/util';
+import { p, Point } from "./lib/point";
+import { activateHidingCheckboxes } from "./lib/hiding_checkbox";
+import { activateFileSelects } from "./lib/file_select";
 
 enableWorkers();
-
-const COLORS: Record<string, string> = {
-  'minecraft:river': 'blue',
-  'minecraft:eroded_badlands': 'orange',
-  'minecraft:forest': 'green',
-  'minecraft:dripstone_caves': 'red',
-  'minecraft:badlands': '#ffdd00',
-  'minecraft:desert': 'tan',
-  'minecraft:warm_ocean': '#ff3333',
-  'minecraft:savanna': '#dd3333',
-  'minecraft:plains': '#22dd22',
-  'minecraft:beach': 'yellow',
-  'minecraft:sparse_jungle': '#66ff66',
-  'minecraft:jungle': '#88ff88',
-  'minecraft:stony_shore': 'grey'
-};
+activateHidingCheckboxes();
+activateFileSelects();
 
 const seedInput = $('#seed', HTMLInputElement);
 const regionFiles = $('#region-files', HTMLInputElement);
 const hover = $('#hover');
 const message = $('#message');
 const map = new MapRenderer('#map');
+const seedForm = $('#seed-form', HTMLFormElement);
+const regionFilesForm = $('#region-files-form', HTMLFormElement);
+const cancelButton = $('#cancel-button', HTMLButtonElement);
+map.requestRender();
 
-const map2 = new MapRenderer('#map2');
+function setStep(n: number) {
+  for (const elt of document.querySelectorAll('.step')) {
+    const step = assertInstanceOf(elt, HTMLElement);
+    const stepNumber = assertNotNull(step.dataset['step']);
+    step.classList.toggle('hidden', parseInt(stepNumber) > n);
+  }
+}
+
+seedForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  setStep(2);
+});
+
+regionFilesForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  setStep(3);
+});
+
+cancelButton.addEventListener('click', () => {
+  if (confirm("This will stop loading the rest of the world!")) {
+    cancelWorldLoading();
+  }
+});
+
 regionFiles.addEventListener('change', async () => {
   const files = regionFiles.files;
+  const maximumColumnsChunk: Record<Point, number> = {};
+  const maximumColumnsQuart: Record<Point, number> = {};
+
   if (files && files.length) {
     const seed = await new Seed(seedInput.value).biomeSeed();
     const { progress, promise } = processRegionFilesForDrownedFarm(seed, Array.from(files));
+
     progress.addEventListener('progress', (e) => {
       const c = e as CustomEvent;
       if (c.detail.type === 'chunk') {
         const color = c.detail.hasCave ? '#91322f' : c.detail.hasRiver ? '#5373bd' : '#aefca7';
-        map.setTileColor(c.detail.x * 16, c.detail.z * 16, color, 16);
+        map.setTileColor(c.detail.x, c.detail.z, color, 16);
         map.requestRender();
       } else if (c.detail.type === 'quart') {
         const color = c.detail.hasCave ? 'red' : c.detail.hasRiver ? '#1e52c9' : '#35c91e';
-        map.setTileColor(c.detail.x * 4, c.detail.z * 4, color, 4);
+        map.setTileColor(c.detail.x, c.detail.z, color, 4);
         map.requestRender();
       } else if (c.detail.type === 'block') {
-        const color = c.detail.allRiver ? 'blue' : c.detail.someRiver ? '#003' : 'green';
+        const color = c.detail.allRiver ? 'blue' : c.detail.someCave ? 'red' : c.detail.someRiver ? '#009' : 'green';
         map.setTileColor(c.detail.x, c.detail.z, color, 1);
         map.requestRender();
       } else if (c.detail.type === 'message') {
         message.textContent = c.detail.message;
+      } else if (c.detail.type === 'chunk-quart') {
+        const x = c.detail.x;
+        const z = c.detail.z;
+        const color = map.getTileColor(x, z, 16);
+        const newColor = color === '#91322f' ? 'red' : color === '#5373bd' ? '#1e52c9' : color;
+        map.setTileColor(x, z, newColor, 16);
+        map.requestRender();
+      } else if (c.detail.type === 'estimates') {
+        console.log('BEST:', c.detail);
+        Object.assign(maximumColumnsChunk, c.detail.maximumColumnsChunk ?? {});
+        Object.assign(maximumColumnsQuart, c.detail.maximumColumnsQuart ?? {});
+      } else if (c.detail.type === 'quart-block') {
+        const color = c.detail.quartAllRiver ? 'blue' : c.detail.quartSomeCave ? 'red' : c.detail.quartSomeRiver ? '#009' : 'green';
+        map.setTileColor(c.detail.x, c.detail.z, color, 4);
+        map.requestRender();
+      } else if (c.detail.type === 'chunk-block') {
+        const color = c.detail.chunkAllRiver ? 'blue' : c.detail.chunkSomeCave ? 'red' : c.detail.chunkSomeRiver ? '#009' : 'green';
+        map.setTileColor(c.detail.x, c.detail.z, color, 16);
+        map.requestRender();
       }
     });
 
     map.requestRender();
     map.addEventListener('mousemove', (x, z) => {
-      hover.textContent = `x:${x} z:${z}`;
+      const quart = p(Math.floor(x / 4), 0, Math.floor(z / 4));
+      const chunk = p(Math.floor(x / 16), 0, Math.floor(z / 16));
+      const max = maximumColumnsQuart[quart] ?? maximumColumnsChunk[chunk] ?? '??';
+      hover.textContent = `x:${x} z:${z} <${max} river columns`;
     });
-    map2.addEventListener('mousemove', (x, z) => {
-      hover.textContent = `x:${x} z:${z}`;
-    });
-
   }
 });

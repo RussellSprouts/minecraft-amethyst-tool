@@ -6,6 +6,8 @@ import { $, assertInstanceOf } from "./util";
 const CHUNK_SIZE = 32;
 const CHUNK_MASK = CHUNK_SIZE - 1;
 
+const MIN_TILE_SIZE = 2;
+
 export class MapRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
@@ -23,9 +25,8 @@ export class MapRenderer {
   private centerZ = 0;
   private tileSize = 16;
 
-  private scrollTargetX = 0;
-  private scrollTargetZ = 0;
-  private scrolling = false;
+  private lod4Enabled = false;
+  private lod16Enabled = false;
 
   private renderRequested = false;
 
@@ -43,13 +44,10 @@ export class MapRenderer {
     this.context = assertInstanceOf(this.canvas.getContext('2d'), CanvasRenderingContext2D);
     this.getColorIndex(this.defaultColor, true);
 
-    const bounds = this.canvas.getBoundingClientRect();
-    this.canvas.width = bounds.right - bounds.left;
-    this.canvas.height = bounds.bottom - bounds.top;
+    this.resizeToElement();
 
     this.canvas.addEventListener('mousemove', (e) => {
       if (e.buttons === 1) {
-        this.scrolling = false;
         this.centerX -= e.movementX;
         this.centerZ -= e.movementY;
         this.requestRender();
@@ -58,7 +56,6 @@ export class MapRenderer {
 
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.scrolling = false;
       const oldBounds = this.getBounds();
       const canvasBounds = this.canvas.getBoundingClientRect();
       const oldPxX = (oldBounds.left + e.clientX - canvasBounds.left) / this.tileSize;
@@ -66,28 +63,32 @@ export class MapRenderer {
 
       this.tileSize -= Math.sign(e.deltaY) / this.lod;
       if (this.lod === 1) {
-        if (this.tileSize < 4) {
-          this.tileSize = 4;
-          this.setLod(4);
+        if (this.tileSize < MIN_TILE_SIZE) {
+          this.tileSize = MIN_TILE_SIZE;
+
+          if (this.lod4Enabled) {
+            this.setLod(4);
+          }
         }
       } else if (this.lod === 4) {
-        if (this.tileSize < 1) {
-          this.setLod(16);
-          this.tileSize = 1;
-        } else if (this.tileSize > 4) {
+        if (this.tileSize < MIN_TILE_SIZE / this.lod) {
+          this.tileSize = MIN_TILE_SIZE / this.lod;
+
+          if (this.lod16Enabled) {
+            this.setLod(16);
+          }
+        } else if (this.tileSize >= MIN_TILE_SIZE) {
           this.setLod(1);
-          this.tileSize = Math.round(this.tileSize);
+          this.tileSize = MIN_TILE_SIZE;
         }
       } else if (this.lod === 16) {
-        if (this.tileSize < 0.25) {
-          this.tileSize = 0.25;
-        } else if (this.tileSize >= 1) {
+        if (this.tileSize < MIN_TILE_SIZE / this.lod) {
+          this.tileSize = MIN_TILE_SIZE / this.lod;
+        } else if (this.tileSize >= MIN_TILE_SIZE / 4) {
           this.setLod(4);
-          this.tileSize = Math.round(this.tileSize * 4) / 4;
+          this.tileSize = Math.round(this.tileSize * 2) / 2;
         }
       }
-
-      console.log('lod', this.lod, this.tileSize);
 
       const newBounds = this.getBounds();
       const newPxX = (newBounds.left + e.clientX - canvasBounds.left) / this.tileSize;
@@ -102,25 +103,9 @@ export class MapRenderer {
     requestAnimationFrame(() => this.animationFrame());
   }
 
-  startScrollTo(x: number, z: number) {
-    this.scrolling = true;
-    this.scrollTargetX = x;
-    this.scrollTargetZ = z;
-  }
-
   private animationFrame() {
     try {
-      if (this.scrolling) {
-        this.centerX = this.centerX + 0.1 * (this.scrollTargetX - this.centerX);
-        this.centerZ = this.centerZ + 0.1 * (this.scrollTargetZ - this.centerZ);
-
-        if (Math.abs(this.centerX - this.scrollTargetX) < 1
-          && Math.abs(this.centerZ - this.scrollTargetZ) < 1) {
-          this.scrolling = false;
-        }
-      }
-
-      if (this.renderRequested || this.scrolling) {
+      if (this.isVisible() && this.renderRequested) {
         this.render();
         this.renderRequested = false;
       }
@@ -155,6 +140,11 @@ export class MapRenderer {
   }
 
   setTileColor(x: number, z: number, color: string, lod: 1 | 4 | 16 = 1) {
+    if (lod === 4) {
+      this.lod4Enabled = true;
+    } else if (lod === 16) {
+      this.lod4Enabled = this.lod16Enabled = true;
+    }
     x = Math.floor(x / lod);
     z = Math.floor(z / lod);
     const map = this.getTileMapAtCoords(x, z, true, lod);
@@ -203,6 +193,7 @@ export class MapRenderer {
   }
 
   private render() {
+    this.resizeToElement();
     this.context.fillStyle = this.defaultColor;
     this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
     // canvas center is centerX
@@ -222,6 +213,18 @@ export class MapRenderer {
         );
       }
     }
+  }
+
+  private resizeToElement() {
+    const bounds = this.canvas.getBoundingClientRect();
+    if (bounds.width !== 0 && bounds.height !== 0) {
+      this.canvas.width = bounds.width;
+      this.canvas.height = bounds.height;
+    }
+  }
+
+  private isVisible() {
+    return this.canvas.offsetParent !== null;
   }
 
   addEventListener(evt: 'mousemove' | 'click', cb: (x: number, z: number) => void) {

@@ -38,6 +38,9 @@
             ]
         }
     },
+    "jsFiles": [
+        "out/assembly.js"
+    ],
     "external": {
         "pako": "pako",
         "three": "THREE",

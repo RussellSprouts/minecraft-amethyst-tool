@@ -72,6 +72,20 @@ export function fileSize(file: File | string) {
   }
 }
 
+export function sortFilesSpiral(fileList: Array<File | string>): Array<File | string> {
+  return fileList.sort((aFile, bFile) => {
+    const a = parseRegionFileName(fileName(aFile));
+    const b = parseRegionFileName(fileName(bFile));
+
+    const aDist = Math.max(Math.abs(a.x), Math.abs(a.z));
+    const bDist = Math.max(Math.abs(b.x), Math.abs(b.z));
+    if (aDist !== bDist) {
+      return aDist - bDist;
+    }
+    return Math.atan2(a.z, a.x) - Math.atan2(b.z, b.x);
+  });
+}
+
 export function sortFilesByDistance(fileList: Array<File | string>): Array<File | string> {
   fileList.sort((aFile, bFile) => {
     const a = parseRegionFileName(fileName(aFile));

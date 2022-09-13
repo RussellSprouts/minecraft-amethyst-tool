@@ -24,11 +24,13 @@
         "allowSyntheticDefaultImports": true,
         "isolatedModules": true,
         "paths": {
-            "pako": ["./third_party/pako/pako.min"]
+            "pako": ["./third_party/pako/pako.min"],
+            "goog:assembly": ["./out/assembly"]
         }
     },
     "exclude": [
         "out",
-        "spec"
+        "spec",
+        "src/assembly"
     ]
 }
