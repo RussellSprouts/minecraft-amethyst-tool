@@ -4,7 +4,8 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "build-all": "npm run textures && npm run build && npm run templates",
+    "build-asc": "npx asc src/assembly/index.ts -b raw -o out/assembly.wasm -t out/assembly.wat -O3 --noExportMemory && node src/assembly/transform.mjs out/assembly.js",
+    "build-all": "npm run textures && npm run build-asc && npm run build && npm run templates",
     "build-js": "npm run build && npm run templates",
     "build": "tscc",
     "test": "ts-node node_modules/jasmine/bin/jasmine --config=jasmine.json",
@@ -28,6 +29,7 @@
     "@types/three": "^0.132.2",
     "@typescript-eslint/eslint-plugin": "^5.30.4",
     "aseprite-cli": "^1.1.2",
+    "assemblyscript": "^0.21.3",
     "ejs": "^3.1.8",
     "eslint": "^8.19.0",
     "jasmine": "^4.0.2",

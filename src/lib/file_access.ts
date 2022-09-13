@@ -44,3 +44,54 @@ export async function readFileOrUrl(file: File | string): Promise<Uint8Array> {
     return readFile(file);
   }
 }
+
+export function parseRegionFileName(name: string): { x: number, z: number } {
+  const match = name.match(/.*r\.(-?[0-9]+)\.(-?[0-9]+)\.mca$/);
+  if (!match) {
+    return { x: Infinity, z: Infinity };
+  }
+  return {
+    x: parseInt(match[1]),
+    z: parseInt(match[2])
+  };
+}
+
+export function fileName(file: File | string) {
+  if (typeof file === 'string') {
+    return file.replace(/^.*\/([^/]+)$/, '$1');
+  } else {
+    return file.name;
+  }
+}
+
+export function fileSize(file: File | string) {
+  if (typeof file === 'string') {
+    return NaN;
+  } else {
+    return file.size;
+  }
+}
+
+export function sortFilesSpiral(fileList: Array<File | string>): Array<File | string> {
+  return fileList.sort((aFile, bFile) => {
+    const a = parseRegionFileName(fileName(aFile));
+    const b = parseRegionFileName(fileName(bFile));
+
+    const aDist = Math.max(Math.abs(a.x), Math.abs(a.z));
+    const bDist = Math.max(Math.abs(b.x), Math.abs(b.z));
+    if (aDist !== bDist) {
+      return aDist - bDist;
+    }
+    return Math.atan2(a.z, a.x) - Math.atan2(b.z, b.x);
+  });
+}
+
+export function sortFilesByDistance(fileList: Array<File | string>): Array<File | string> {
+  fileList.sort((aFile, bFile) => {
+    const a = parseRegionFileName(fileName(aFile));
+    const b = parseRegionFileName(fileName(bFile));
+    return (a.x * a.x + a.z * a.z) - (b.x * b.x + b.z * b.z);
+  });
+
+  return fileList;
+}

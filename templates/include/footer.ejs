@@ -2,12 +2,16 @@
 <footer>
     <div class="nes-container with-title">
         <p class="title">Other tools</p>
-        <p><a href="index.html">geode</a> &mdash; <a href="afk.html">afk</a></p>
+        <p>
+            <a href="index.html">geode</a> 
+            &mdash; <a href="afk.html">afk</a>
+            &mdash; <a href="drowned.html">drowned</a>
+        </p>
     </div>
 </footer>
 <script type="application/russellsprouts-worker"
         data-name="general"
-        src="<%= workerResource('out/worker.js', 'third_party/pako/pako.min.js', 'out/root.js'); %>"></script>
+        src="<%= workerResource('out/worker.js', 'third_party/pako/pako.min.js', 'out/root.js', 'out/assembly.wasm'); %>"></script>
 <script type="text/javascript" src="<%= resource('third_party/three.js/three.min.js'); %>"></script>
 <script type="text/javascript" src="<%= resource('third_party/pako/pako.min.js'); %>"></script>
 <script type="text/javascript" src="<%= resource('out/root.js'); %>"></script>

@@ -11,15 +11,26 @@ declare global {
   function importScripts(...scripts: string[]): void;
 }
 
+import { loadAssembly } from "./lib/load_assembly";
+
 // The worker is loaded at a path which includes its dependencies.
-// e.g. worker.abc123.(third_party/pako/pako.min.321cba.js).js
+// e.g. worker.abc123.(third_party$pako$pako.min.321cba.js).js
 // Load the js files listed as dependencies.
 const params = location.pathname.match(/\((.*)\)/)?.[1].replace(/\$/g, '/');
 if (params) {
-  importScripts(...params.split(/,/g).map(d => `../${d}`));
+  for (const param of params.split(/,/g).map(d => `../${d}`)) {
+    if (param.endsWith('.js')) {
+      importScripts(param);
+    } else if (param.endsWith('.wasm')) {
+      loadAssembly(param);
+    } else {
+      console.error('Unknown file type', param);
+    }
+  }
 }
 
 import { getPatternData } from "./lib/afk_worker";
+import { cancelWorldLoading, processRegionFilesForDrownedFarm } from "./lib/drowned_worker";
 import { getBuddingAmethystPerChunk } from "./lib/geode_afk_worker";
 import { processRegionFiles } from "./lib/region_files_worker";
 import { WorkerContext, WrappedFunction } from "./lib/run_in_worker";
@@ -35,6 +46,8 @@ console.log('I am the worker!');
 registerFunction(processRegionFiles);
 registerFunction(getBuddingAmethystPerChunk);
 registerFunction(getPatternData);
+registerFunction(processRegionFilesForDrownedFarm);
+registerFunction(cancelWorldLoading);
 
 let workerName = '';
 const workers = new Map<string, MessagePort>();

@@ -25,6 +25,12 @@
                 "renderer"
             ]
         },
+        "drowned": {
+            "entry": "src/drowned.ts",
+            "dependencies": [
+                "renderer"
+            ]
+        },
         "worker": {
             "entry": "src/worker.ts",
             "dependencies": [
@@ -32,6 +38,9 @@
             ]
         }
     },
+    "jsFiles": [
+        "out/assembly.js"
+    ],
     "external": {
         "pako": "pako",
         "three": "THREE",

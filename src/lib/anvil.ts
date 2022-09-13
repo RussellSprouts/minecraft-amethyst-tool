@@ -119,6 +119,11 @@ const MINECRAFT_SECTION = {
     }],
   },
 
+  'biomes': {
+    'palette': ['string'],
+    'data': 'longArray',
+  },
+
   // older versions
   'BlockStates': 'longArray',
   'Palette': [{
@@ -199,6 +204,15 @@ class ChunkData {
     }
     return 'minecraft:air';
   }
+
+  getBiomeRaw(x: number, y: number, z: number): string {
+    const sectionIndex = Math.floor(y / 4);
+    const section = this.sectionsByY[sectionIndex];
+    if (section != null) {
+      return section.getBiomeRaw(x, y, z);
+    }
+    return 'minecraft:the_void';
+  }
 }
 
 class ChunkSection {
@@ -209,6 +223,7 @@ class ChunkSection {
     this.palette = paletteEntries.map(blockState);
     this.y = section['Y'] ?? 0;
     this.packedBlockStates = section['block_states']?.['data'] ?? section['BlockStates'];
+    this.packedBiomes = section['biomes'];
     this.bitsPerBlock = Math.max(Math.ceil(Math.log2(this.palette.length)), 4);
   }
 
@@ -217,6 +232,8 @@ class ChunkSection {
   packedBlockStates: DataView | undefined;
   blockStates: Uint16Array | Uint8Array | undefined;
   bitsPerBlock: number;
+  packedBiomes: Section['biomes'] | undefined;
+  biomes: Uint16Array | Uint8Array | undefined;
 
   getBlockState(x: number, y: number, z: number): string {
     if (!this.blockStates && this.packedBlockStates) {
@@ -231,5 +248,27 @@ class ChunkSection {
       return this.palette[this.blockStates[blockIndex]];
     }
     return 'minecraft:air';
+  }
+
+  getBiomeRaw(x: number, y: number, z: number): string {
+    if (!this.biomes && this.packedBiomes) {
+      if (this.packedBiomes['palette'].length === 1) {
+        return this.packedBiomes['palette'][0];
+      }
+      this.biomes = expandLongPackedArray(
+        this.packedBiomes['data'],
+        Math.ceil(Math.log2(this.packedBiomes['palette'].length)),
+        64,
+        false);
+    }
+
+    if (this.biomes) {
+      x = x & 3;
+      y = y & 3;
+      z = z & 3;
+      const blockIndex = x + z * 4 + y * 16;
+      return this.packedBiomes?.['palette'][this.biomes[blockIndex]] ?? 'minecraft:the_void';
+    }
+    return 'minecraft:the_void';
   }
 }
